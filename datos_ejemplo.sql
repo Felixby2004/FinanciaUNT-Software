@@ -3,10 +3,11 @@
 -- ========================================
 
 -- Insertar usuarios de ejemplo
-INSERT INTO usuarios (id, email, nombre, plan_suscripcion, access_token_plaid, configuracion) VALUES
-    ('550e8400-e29b-41d4-a716-446655440000', 'juan.perez@email.com', 'Juan Pérez', 'premium', '123456', '{"moneda": "USD", "idioma": "es", "notificaciones": true}'),
-    ('550e8400-e29b-41d4-a716-446655440001', 'maria.garcia@email.com', 'María García', 'basico', '123456', '{"moneda": "USD", "idioma": "es", "notificaciones": true}'),
-    ('550e8400-e29b-41d4-a716-446655440002', 'carlos.rodriguez@email.com', 'Carlos Rodríguez', 'enterprise', '123456', '{"moneda": "USD", "idioma": "es", "notificaciones": true}');
+INSERT INTO usuarios (id, email, nombre, plan_suscripcion, access_token_plaid, rol, configuracion) VALUES
+    ('550e8400-e29b-41d4-a716-446655440003', 'admin@financiaunt.com', 'Administrador', 'enterprise', 'admin123', 'admin', '{"moneda": "USD", "idioma": "es", "notificaciones": true}'),
+    ('550e8400-e29b-41d4-a716-446655440000', 'juan.perez@email.com', 'Juan Pérez', 'premium', '123456', 'cliente', '{"moneda": "USD", "idioma": "es", "notificaciones": true}'),
+    ('550e8400-e29b-41d4-a716-446655440001', 'maria.garcia@email.com', 'María García', 'basico', '123456', 'cliente', '{"moneda": "USD", "idioma": "es", "notificaciones": true}'),
+    ('550e8400-e29b-41d4-a716-446655440002', 'carlos.rodriguez@email.com', 'Carlos Rodríguez', 'enterprise', '123456', 'cliente', '{"moneda": "USD", "idioma": "es", "notificaciones": true}');
 
 -- Insertar transacciones de ejemplo para Juan Pérez
 INSERT INTO transacciones (usuario_id, monto, categoria, descripcion, fecha, tipo, cuenta, metadata) VALUES

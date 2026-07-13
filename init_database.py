@@ -45,18 +45,40 @@ class DatabaseInitializer:
         """Crear usuarios de ejemplo"""
         usuarios_creados = []
         
+        # Crear admin primero
+        admin_usuario = {
+            'email': "admin@financiaunt.com",
+            'nombre': "Administrador",
+            'plan_suscripcion': "enterprise",
+            'rol': "admin",
+            'access_token_plaid': "admin123",
+            'configuracion': {
+                'moneda': 'USD',
+                'idioma': 'es',
+                'notificaciones': True
+            }
+        }
+        
+        try:
+            response = self.client.table('usuarios').insert(admin_usuario).execute()
+            if response.data:
+                usuarios_creados.append(response.data[0])
+                st.success("✅ ¡Usuario Admin creado! Email: admin@financiaunt.com, Contraseña: admin123")
+        except Exception as e:
+            st.warning(f"Admin ya existe o error: {str(e)}")
+        
         nombres = [
-            ("Juan Pérez", "juan.perez@email.com", "123456"),
-            ("María García", "maria.garcia@email.com", "123456"),
-            ("Carlos Rodríguez", "carlos.rodriguez@email.com", "123456"),
-            ("Ana Martínez", "ana.martinez@email.com", "123456"),
-            ("Luis Torres", "luis.torres@email.com", "123456")
+            ("Juan Pérez", "juan.perez@email.com", "123456", "cliente"),
+            ("María García", "maria.garcia@email.com", "123456", "cliente"),
+            ("Carlos Rodríguez", "carlos.rodriguez@email.com", "123456", "cliente"),
+            ("Ana Martínez", "ana.martinez@email.com", "123456", "cliente"),
+            ("Luis Torres", "luis.torres@email.com", "123456", "cliente")
         ]
         
         planes = ['basico', 'premium', 'enterprise']
         
         for i in range(min(cantidad, len(nombres))):
-            nombre, email, contraseña = nombres[i]
+            nombre, email, contraseña, rol = nombres[i]
             plan = random.choice(planes)
             
             try:
@@ -64,6 +86,7 @@ class DatabaseInitializer:
                     'email': email,
                     'nombre': nombre,
                     'plan_suscripcion': plan,
+                    'rol': rol,
                     'access_token_plaid': contraseña,
                     'configuracion': {
                         'moneda': 'USD',
@@ -81,9 +104,25 @@ class DatabaseInitializer:
         
         return usuarios_creados
     
+    def crear_metas_ejemplo(self, usuario_id: str):
+        """Crear metas financieras de ejemplo"""
+        metas = [
+            {'nombre': 'Vacaciones', 'descripcion': 'Vacaciones a la playa', 'tipo': 'ahorro', 'monto_objetivo': 2000, 'monto_actual': 500, 'fecha_limite': (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d')},
+            {'nombre': 'Emergencia', 'descripcion': 'Fondo de emergencia', 'tipo': 'ahorro', 'monto_objetivo': 5000, 'monto_actual': 1000, 'fecha_limite': (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')}
+        ]
+        
+        for meta in metas:
+            meta['usuario_id'] = usuario_id
+            try:
+                self.client.table('metas_financieras').insert(meta).execute()
+            except Exception as e:
+                st.warning(f"Error al crear meta: {str(e)}")
+        
+        st.success("✅ Metas financieras de ejemplo creadas!")
+    
     def login(self, usuario):
         try:
-            response = self.client.table('usuarios').select('*').eq('nombre',usuario['nombre']).eq('access_token_plaid',usuario['access_token_plaid']).execute()
+            response = self.client.table('usuarios').select('*').eq('email',usuario['email']).eq('access_token_plaid',usuario['access_token_plaid']).execute()
             
             if not response.data:
                 st.error("❌ Credenciales incorrectas o usuario no encontrado")
@@ -91,6 +130,8 @@ class DatabaseInitializer:
                 
             st.session_state['user_id'] = response.data[0]['id']
             st.session_state['user_name'] = response.data[0]['nombre']
+            st.session_state['user_role'] = response.data[0].get('rol', 'cliente')
+            st.session_state['user_email'] = response.data[0].get('email', '')
             return True
         except Exception as e:
             st.error(f"❌ Error al ingresar: {str(e)}")
@@ -258,19 +299,23 @@ class DatabaseInitializer:
                 usuarios = self.crear_usuarios_ejemplo(cantidad_usuarios)
                 
                 if usuarios:
-                    # Para cada usuario crear transacciones, presupuestos y alertas
+                    # Para cada usuario crear transacciones, presupuestos, alertas y metas
                     for i, usuario in enumerate(usuarios):
                         st.markdown(f"---")
                         st.subheader(f"📊 Datos para {usuario['nombre']}")
                         
-                        # Transacciones
-                        self.crear_transacciones_ejemplo(usuario['id'], cantidad_transacciones)
-                        
-                        # Presupuestos
-                        self.crear_presupuestos_ejemplo(usuario['id'])
-                        
-                        # Alertas
-                        self.crear_alertas_ejemplo(usuario['id'])
+                        if usuario['rol'] == 'cliente':
+                            # Transacciones
+                            self.crear_transacciones_ejemplo(usuario['id'], cantidad_transacciones)
+                            
+                            # Presupuestos
+                            self.crear_presupuestos_ejemplo(usuario['id'])
+                            
+                            # Alertas
+                            self.crear_alertas_ejemplo(usuario['id'])
+                            
+                            # Metas
+                            self.crear_metas_ejemplo(usuario['id'])
                 
                 st.markdown("---")
                 st.success("✅ ¡Inicialización completada exitosamente!")

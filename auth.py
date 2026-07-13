@@ -9,16 +9,16 @@ def main_auth():
 
     with tab1:
         with st.form('login_usuario'):
-            nombre = st.text_input('Ingrese nombre',key='login_nombre')
+            email = st.text_input('Ingrese email',key='login_email')
             contraseña = st.text_input('Ingrese contraseña',key='login_contraseña',type='password')
             usuario = {
-                'nombre':nombre,
+                'email':email,
                 'access_token_plaid':contraseña
             }
             submited = st.form_submit_button('Ingresar')
             try:
                 if submited:
-                    if nombre and contraseña:
+                    if email and contraseña:
                         if db.login(usuario):
                             st.session_state['logged_in'] = True
                             st.rerun()
@@ -33,10 +33,11 @@ def main_auth():
         correo = st.text_input('Ingrese correo')
         plan = st.selectbox('Seleccione un plan',options=['basico','premium','enterprise'])
         usuario = {
-            'nombre':nombre,
-            'access_token_plaid':contraseña,
-            'email':correo,
-            'plan_suscripcion':plan
+            'nombre': nombre,
+            'access_token_plaid': contraseña,
+            'email': correo,
+            'plan_suscripcion': plan,
+            'rol': 'cliente'
         }
         if st.button('Registrar'):
             if nombre and contraseña and contraseña == contraseña_r:

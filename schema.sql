@@ -9,8 +9,46 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nombre TEXT,
     plan_suscripcion TEXT DEFAULT 'basico',
     access_token_plaid TEXT,
+    rol TEXT DEFAULT 'cliente' CHECK (rol IN ('cliente', 'admin')),
     configuracion JSONB DEFAULT '{}'::jsonb,
     fecha_registro TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabla de Recomendaciones IA
+CREATE TABLE IF NOT EXISTS recomendaciones (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE CASCADE,
+    tipo_modelo TEXT NOT NULL,
+    categoria TEXT,
+    recomendacion TEXT NOT NULL,
+    monto_recomendado NUMERIC,
+    prioridad INTEGER DEFAULT 1,
+    implementada BOOLEAN DEFAULT FALSE,
+    fecha_generacion TIMESTAMPTZ DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+-- Tabla de Historial de Recomendaciones Aceptadas
+CREATE TABLE IF NOT EXISTS historial_recomendaciones (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    recomendacion_id UUID REFERENCES recomendaciones(id) ON DELETE CASCADE,
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE CASCADE,
+    fecha_aceptacion TIMESTAMPTZ DEFAULT NOW(),
+    resultado TEXT
+);
+
+-- Tabla de Metas Financieras
+CREATE TABLE IF NOT EXISTS metas_financieras (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    tipo TEXT NOT NULL,
+    monto_objetivo NUMERIC NOT NULL,
+    monto_actual NUMERIC DEFAULT 0,
+    fecha_limite DATE,
+    estado TEXT DEFAULT 'activo' CHECK (estado IN ('activo', 'completado', 'cancelado')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Tabla de Transacciones
