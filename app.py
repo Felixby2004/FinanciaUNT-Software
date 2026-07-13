@@ -3,20 +3,12 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import numpy as np
 from datetime import datetime, timedelta
-import json
 from supabase import create_client, Client
-from typing import Dict, List, Optional
-import uuid
+from typing import Dict, Optional
 from fpdf import FPDF
-import io
-import base64
-import requests
 from auth import main_auth
 from models.recommenders import RecommenderComparator
-import time
 
 # Configuración de la página
 st.set_page_config(
@@ -52,14 +44,14 @@ class UsuarioManager:
         try:
             response = self.db.table('usuarios').select('*').order('fecha_registro', desc=True).execute()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except:
+        except Exception:
             return pd.DataFrame()
     
     def obtener_usuario(self, usuario_id: str) -> Optional[Dict]:
         try:
             response = self.db.table('usuarios').select('*').eq('id', usuario_id).execute()
             return response.data[0] if response.data else None
-        except:
+        except Exception:
             return None
     
     def crear_usuario(self, email: str, nombre: str, plan: str = 'basico', contraseña: str = '123456', rol: str = 'cliente') -> Dict:
@@ -105,7 +97,7 @@ class TransaccionManager:
                 query = query.eq('usuario_id', usuario_id)
             response = query.order('fecha', desc=True).execute()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except:
+        except Exception:
             return pd.DataFrame()
     
     def crear_transaccion(self, usuario_id: str, monto: float, categoria: str, 
@@ -144,7 +136,7 @@ class PresupuestoManager:
                 query = query.eq('usuario_id', usuario_id)
             response = query.order('categoria').execute()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except:
+        except Exception:
             return pd.DataFrame()
     
     def crear_presupuesto(self, usuario_id: str, categoria: str, 
@@ -181,7 +173,7 @@ class AlertaManager:
                 query = query.eq('leida', False)
             response = query.order('created_at', desc=True).execute()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except:
+        except Exception:
             return pd.DataFrame()
     
     def crear_alerta(self, usuario_id: str, tipo: str, mensaje: str, 
@@ -210,7 +202,7 @@ class MetaManager:
         try:
             response = self.db.table('metas_financieras').select('*').eq('usuario_id', usuario_id).execute()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except:
+        except Exception:
             return pd.DataFrame()
     
     def crear_meta(self, usuario_id: str, nombre: str, descripcion: str, 
@@ -247,7 +239,7 @@ class RecomendacionManager:
         try:
             response = self.db.table('recomendaciones').select('*').eq('usuario_id', usuario_id).execute()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except:
+        except Exception:
             return pd.DataFrame()
     
     def guardar_recomendacion(self, usuario_id: str, tipo_modelo: str, categoria: str, 
@@ -304,11 +296,16 @@ class AsesorFinanciero:
             for categoria, gasto in gastos_por_categoria.items():
                 if categoria in presupuestos_dict:
                     presupuesto = presupuestos_dict[categoria]
-                    porcentaje = (gasto / presupuesto) * 100
-                    if porcentaje > 90:
-                        alertas.append(f"Gastos en {categoria} al {porcentaje:.1f}% del presupuesto")
-                    elif porcentaje > 100:
+                    if presupuesto and presupuesto > 0:
+                        porcentaje = (gasto / presupuesto) * 100
+                    else:
+                        porcentaje = float('inf')
+
+                    # Priorizar aviso de exceso antes que el aviso de proximidad
+                    if porcentaje > 100:
                         alertas.append(f"¡Presupuesto excedido en {categoria}! ({porcentaje:.1f}%)")
+                    elif porcentaje > 90:
+                        alertas.append(f"Gastos en {categoria} al {porcentaje:.1f}% del presupuesto")
         
         # Recomendaciones generales
         if total_ingresos > 0:
@@ -389,7 +386,7 @@ class PDFReport(FPDF):
         import os
         try:
             os.remove(temp_file)
-        except:
+        except Exception:
             pass
 
 def generar_graficos(transacciones: pd.DataFrame, analisis: Dict) -> Dict[str, bytes]:
@@ -582,7 +579,7 @@ def generar_reporte_pdf(usuario_nombre: str, transacciones: pd.DataFrame,
         if isinstance(pdf_output, str):
             return pdf_output.encode('latin1')
         return pdf_output
-    except:
+    except Exception:
         return pdf.output(dest='S').encode('latin1')
 
 # ==================== FUNCIONES AUXILIARES ====================
@@ -1080,7 +1077,6 @@ def pagina_admin(db: DatabaseManager, usuario_mgr: UsuarioManager,
         st.subheader("Estadísticas Generales del Sistema")
         
         all_transacciones = transaccion_mgr.listar_transacciones(dias=365)
-        all_presupuestos = presupuesto_mgr.listar_presupuestos()
         
         if not all_transacciones.empty:
             col1, col2, col3 = st.columns(3)

@@ -8,7 +8,6 @@ import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime, timedelta
 import random
-import uuid
 
 class DatabaseInitializer:
     """Clase para inicializar y poblar la base de datos"""
@@ -21,7 +20,8 @@ class DatabaseInitializer:
     def verificar_conexion(self) -> bool:
         """Verificar conexión con Supabase"""
         try:
-            response = self.client.table('usuarios').select('count').execute()
+            # Ejecutar la consulta y descartar el resultado, solo verificar que no falle
+            _response = self.client.table('usuarios').select('count').execute()
             st.success("✅ Conexión con Supabase establecida correctamente")
             return True
         except Exception as e:
@@ -301,7 +301,7 @@ class DatabaseInitializer:
                 if usuarios:
                     # Para cada usuario crear transacciones, presupuestos, alertas y metas
                     for i, usuario in enumerate(usuarios):
-                        st.markdown(f"---")
+                        st.markdown("---")
                         st.subheader(f"📊 Datos para {usuario['nombre']}")
                         
                         if usuario['rol'] == 'cliente':

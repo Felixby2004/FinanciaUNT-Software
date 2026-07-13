@@ -5,7 +5,7 @@ Utilidades y helpers para el sistema de mantenedores
 
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List
 import streamlit as st
 
 class ValidationError(Exception):
@@ -239,8 +239,11 @@ class AlertGenerator:
             
             if categoria in gastos_por_categoria.index:
                 gasto_actual = gastos_por_categoria[categoria]
-                porcentaje = (gasto_actual / limite) * 100
-                
+                if limite and limite > 0:
+                    porcentaje = (gasto_actual / limite) * 100
+                else:
+                    porcentaje = float('inf')
+
                 if gasto_actual > limite:
                     alertas.append({
                         'tipo': 'presupuesto_excedido',

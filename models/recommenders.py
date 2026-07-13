@@ -11,8 +11,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
-import random
-from collections import defaultdict
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -47,7 +45,10 @@ class RuleBasedRecommender:
             for categoria, total_gasto in gastos_por_categoria.items():
                 if categoria in presupuestos_dict:
                     presupuesto = presupuestos_dict[categoria]
-                    porcentaje = (total_gasto / presupuesto) * 100
+                    if presupuesto and presupuesto > 0:
+                        porcentaje = (total_gasto / presupuesto) * 100
+                    else:
+                        porcentaje = float('inf')
                     
                     if porcentaje > 100:
                         recommendations.append({
@@ -141,7 +142,8 @@ class CollaborativeRecommender:
             user2_profile = self._create_user_profile(user2_data)
             
             similarity = self._cosine_similarity(user1_profile, user2_profile)
-            if similarity > 0.3:
+            # Reducido threshold de 0.3 a 0.1 para incluir más usuarios
+            if similarity > 0.1:
                 similarities.append((user_id, similarity))
         
         similarities.sort(key=lambda x: x[1], reverse=True)
@@ -219,7 +221,8 @@ class CollaborativeRecommender:
             user_pct = user_profile.get(categoria, 0)
             similar_pct = similar_avg_profile.get(categoria, 0)
             
-            if user_pct > similar_pct + 0.05:
+            # Reducido umbral de 0.05 a 0.02 para mayor sensibilidad
+            if user_pct > similar_pct + 0.02:
                 monto_ahorro = float((user_pct - similar_pct) * total_user_gastos)
                 recommendations.append({
                     'categoria': categoria,
@@ -238,17 +241,64 @@ class SavingsOptimizerRecommender:
     """
     Modelo 3: Optimizador de ahorro y predicción de gastos
     - Predice gastos futuros y optimiza ahorro
+    - Análisis de tendencias y volatilidad
+    - Recomendaciones preventivas basadas en patrones históricos
     """
     
     def __init__(self):
         self.name = "Modelo Optimización de Ahorro"
-        self.version = "1.0"
+        self.version = "2.0"
     
-    def _predict_future_expenses(self, df_transactions: pd.DataFrame, days: int = 30) -> Dict[str, float]:
-        """Predicción simple de gastos futuros (promedio móvil)"""
+    def _analyze_trends(self, df_transactions: pd.DataFrame, days: int = 60) -> Dict[str, Dict]:
+        """Analizar tendencias de gastos por categoría"""
         if df_transactions.empty:
             return {}
         
+        df_transactions = df_transactions.copy()
+        df_transactions['fecha'] = pd.to_datetime(df_transactions['fecha'])
+        gastos = df_transactions[df_transactions['tipo'] == 'gasto'].copy()
+        
+        if gastos.empty:
+            return {}
+        
+        trends = {}
+        cutoff_date = datetime.now() - timedelta(days=days)
+        
+        for categoria in gastos['categoria'].unique():
+            cat_gastos = gastos[gastos['categoria'] == categoria].sort_values('fecha')
+            
+            if len(cat_gastos) >= 3:
+                # Dividir en dos períodos
+                mid_point = len(cat_gastos) // 2
+                first_half = cat_gastos.iloc[:mid_point]['monto'].mean() if mid_point > 0 else 0
+                second_half = cat_gastos.iloc[mid_point:]['monto'].mean()
+                
+                # Calcular tendencia
+                if first_half > 0:
+                    trend_pct = ((second_half - first_half) / first_half) * 100
+                else:
+                    trend_pct = 0
+                
+                # Volatilidad (desviación estándar)
+                volatility = cat_gastos['monto'].std()
+                
+                trends[categoria] = {
+                    'avg_first': first_half,
+                    'avg_second': second_half,
+                    'trend_pct': trend_pct,
+                    'volatility': volatility,
+                    'total_transactions': len(cat_gastos),
+                    'avg_transaction': cat_gastos['monto'].mean()
+                }
+        
+        return trends
+    
+    def _predict_future_expenses(self, df_transactions: pd.DataFrame, days: int = 30) -> Dict[str, float]:
+        """Predicción avanzada de gastos futuros con análisis de tendencias"""
+        if df_transactions.empty:
+            return {}
+        
+        df_transactions = df_transactions.copy()
         df_transactions['fecha'] = pd.to_datetime(df_transactions['fecha'])
         gastos = df_transactions[df_transactions['tipo'] == 'gasto'].copy()
         
@@ -256,15 +306,22 @@ class SavingsOptimizerRecommender:
             return {}
         
         predictions = {}
+        trends = self._analyze_trends(df_transactions)
         
-        # Predicción por categoría
+        # Predicción por categoría con análisis de tendencia
         for categoria in gastos['categoria'].unique():
             cat_gastos = gastos[gastos['categoria'] == categoria]
             if len(cat_gastos) >= 3:
-                # Promedio de últimos 30 días
                 monthly_avg = cat_gastos['monto'].mean()
-                # Añadir tendencia (2% de aumento)
-                predictions[categoria] = monthly_avg * 1.02
+                
+                # Ajustar por tendencia si existe
+                if categoria in trends:
+                    trend_factor = 1 + (trends[categoria]['trend_pct'] / 100)
+                else:
+                    trend_factor = 1.0
+                
+                # Predicción con tendencia
+                predictions[categoria] = monthly_avg * trend_factor
         
         # Predicción total
         total_prediction = sum(predictions.values())
@@ -273,59 +330,131 @@ class SavingsOptimizerRecommender:
         return predictions
     
     def generate_recommendations(self, df_transactions: pd.DataFrame, df_metas: pd.DataFrame) -> List[Dict]:
-        """Generar recomendaciones de optimización de ahorro"""
+        """Generar recomendaciones predictivas y de optimización de ahorro"""
         recommendations = []
         
         if df_transactions.empty:
             return recommendations
         
+        df_transactions = df_transactions.copy()
+        df_transactions['fecha'] = pd.to_datetime(df_transactions['fecha'])
+        gastos = df_transactions[df_transactions['tipo'] == 'gasto'].copy()
+        ingresos = df_transactions[df_transactions['tipo'] == 'ingreso']['monto'].sum()
+        gastos_total = gastos['monto'].sum()
+        
         # Predicción de gastos
         predictions = self._predict_future_expenses(df_transactions)
+        trends = self._analyze_trends(df_transactions)
         
-        if not predictions:
+        if not predictions or predictions.get('total', 0) == 0:
             return recommendations
         
-        # Análisis de metas financieras
-        if not df_metas.empty:
-            for _, meta in df_metas[df_metas['estado'] == 'activo'].iterrows():
-                monto_faltante = meta['monto_objetivo'] - meta['monto_actual']
-                
-                if meta['fecha_limite']:
-                    fecha_limite = pd.to_datetime(meta['fecha_limite'])
-                    dias_restantes = (fecha_limite - datetime.now()).days
-                    
-                    if dias_restantes > 0:
-                        ahorro_mensual_necesario = monto_faltante / (dias_restantes / 30)
-                        
-                        recommendations.append({
-                            'categoria': 'Meta Financiera',
-                            'tipo_recomendacion': 'Planificación de meta',
-                            'recomendacion': f'Para alcanzar tu meta "{meta["nombre"]}", necesitas ahorrar ${ahorro_mensual_necesario:.2f}/mes',
-                            'monto_recomendado': ahorro_mensual_necesario,
-                            'prioridad': 3,
-                            'accion': f'Configura un ahorro automático mensual de ${ahorro_mensual_necesario:.2f}',
-                            'beneficio': 'Alcanza tu meta en tiempo'
-                        })
+        # ========== ANÁLISIS 1: Tendencias de gastos por categoría ==========
+        for categoria, trend_data in trends.items():
+            trend_pct = trend_data['trend_pct']
+            
+            # Detectar categorías con gastos crecientes
+            if trend_pct > 15:
+                recommendations.append({
+                    'categoria': categoria,
+                    'tipo_recomendacion': 'Tendencia creciente',
+                    'recomendacion': f'Tu gasto en {categoria} está aumentando ({trend_pct:.1f}% entre períodos)',
+                    'monto_recomendado': trend_data['avg_second'] * 0.15,
+                    'prioridad': 3,
+                    'accion': f'Analiza por qué sube tu gasto en {categoria} y toma medidas preventivas',
+                    'beneficio': f'Detiene el aumento: ${trend_data["avg_second"] * 0.15:.2f}/mes'
+                })
+            
+            # Detectar categorías volatile con gastos irregulares
+            if trend_data['volatility'] > (trend_data['avg_transaction'] * 0.5):
+                recommendations.append({
+                    'categoria': categoria,
+                    'tipo_recomendacion': 'Gastos irregulares',
+                    'recomendacion': f'{categoria} tiene gastos muy irregulares (volatilidad alta)',
+                    'monto_recomendado': trend_data['volatility'],
+                    'prioridad': 2,
+                    'accion': f'Regulariza tus gastos en {categoria} con límites mensuales',
+                    'beneficio': 'Mayor control y predictibilidad de gastos'
+                })
         
-        # Recomendación de optimización de gastos
-        gastos_predichos = predictions.get('total', 0)
-        ingresos = df_transactions[df_transactions['tipo'] == 'ingreso']['monto'].sum()
-        gastos_actuales = df_transactions[df_transactions['tipo'] == 'gasto']['monto'].sum()
+        # ========== ANÁLISIS 2: Predicción de gastos futuros ==========
+        predicted_total = predictions.get('total', 0)
+        if predicted_total > gastos_total:
+            aumento = predicted_total - gastos_total
+            recommendations.append({
+                'categoria': 'Predicción',
+                'tipo_recomendacion': 'Aumento de gastos proyectado',
+                'recomendacion': f'Basado en tendencias, proyectamos un gasto de ${predicted_total:.2f} (aumento de ${aumento:.2f})',
+                'monto_recomendado': aumento,
+                'prioridad': 2,
+                'accion': 'Anticípate reduciendo gastos ahora o aumentando ingresos',
+                'beneficio': 'Evita sorpresas financieras'
+            })
         
+        # ========== ANÁLISIS 3: Optimización de ahorro ==========
         if ingresos > 0:
+            ahorro_actual = ingresos - gastos_total
             ahorro_ideal = ingresos * 0.2
-            ahorro_actual = ingresos - gastos_actuales
             
             if ahorro_actual < ahorro_ideal:
+                ahorro_faltante = ahorro_ideal - ahorro_actual
                 recommendations.append({
                     'categoria': 'Optimización',
                     'tipo_recomendacion': 'Plan de ahorro optimizado',
-                    'recomendacion': f'Para un plan ideal, deberías ahorrar ${ahorro_ideal:.2f} (20% de tus ingresos)',
-                    'monto_recomendado': ahorro_ideal - ahorro_actual,
+                    'recomendacion': f'Tu ahorro actual es ${ahorro_actual:.2f} (ideal: ${ahorro_ideal:.2f})',
+                    'monto_recomendado': ahorro_faltante,
                     'prioridad': 2,
-                    'accion': 'Aumenta tu ahorro gradualmente',
-                    'beneficio': 'Mejora tu futuro financiero'
+                    'accion': 'Reduce gastos en categorías con tendencia o volatilidad alta',
+                    'beneficio': f'Alcanza metaahorro del 20%: ${ahorro_ideal:.2f}/mes'
                 })
+        
+        # ========== ANÁLISIS 4: Categoría con mayor oportunidad de reducción ==========
+        if trends:
+            # Buscar categoría más cara con trend positivo
+            high_impact = None
+            for cat, trend_data in sorted(trends.items(), key=lambda x: x[1]['avg_second'], reverse=True):
+                if trend_data['trend_pct'] > 5 or trend_data['volatility'] > (trend_data['avg_transaction'] * 0.3):
+                    high_impact = (cat, trend_data)
+                    break
+            
+            if high_impact:
+                cat, data = high_impact
+                ahorro_potencial = data['avg_second'] * 0.15
+                recommendations.append({
+                    'categoria': cat,
+                    'tipo_recomendacion': 'Oportunidad de ahorro prioritaria',
+                    'recomendacion': f'{cat} es tu categoría con mayor oportunidad (${data["avg_second"]:.2f}/mes promedio)',
+                    'monto_recomendado': ahorro_potencial,
+                    'prioridad': 3,
+                    'accion': f'Busca reducir {cat} en un 15% mediante optimización',
+                    'beneficio': f'Potencial ahorro: ${ahorro_potencial:.2f}/mes'
+                })
+        
+        # ========== ANÁLISIS 5: Metas financieras ==========
+        if not df_metas.empty and len(df_metas) > 0:
+            active_metas = df_metas[df_metas['estado'] == 'activo'] if 'estado' in df_metas.columns else df_metas
+            for _, meta in active_metas.iterrows():
+                try:
+                    monto_faltante = float(meta.get('monto_objetivo', 0)) - float(meta.get('monto_actual', 0))
+                    
+                    if monto_faltante > 0 and meta.get('fecha_limite'):
+                        fecha_limite = pd.to_datetime(meta['fecha_limite'])
+                        dias_restantes = (fecha_limite - datetime.now()).days
+                        
+                        if dias_restantes > 0:
+                            ahorro_mensual = monto_faltante / max(1, dias_restantes / 30)
+                            
+                            recommendations.append({
+                                'categoria': 'Meta Financiera',
+                                'tipo_recomendacion': 'Planificación de meta',
+                                'recomendacion': f'Para "{meta.get("nombre", "Meta")}", necesitas ${ahorro_mensual:.2f}/mes',
+                                'monto_recomendado': ahorro_mensual,
+                                'prioridad': 3,
+                                'accion': f'Reduce gastos para ahorrar ${ahorro_mensual:.2f}/mes',
+                                'beneficio': f'Completa tu meta a tiempo'
+                            })
+                except (ValueError, TypeError, KeyError):
+                    continue
         
         return recommendations
 
