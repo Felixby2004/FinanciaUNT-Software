@@ -6,6 +6,10 @@ const Profile = ({ user, onUserUpdate }) => {
   const [formData, setFormData] = useState({
     nombre: user.nombre,
     email: user.email,
+    monthlyIncome: user.configuracion?.monthlyIncome || '',
+    riskProfile: user.configuracion?.riskProfile || 'moderado',
+    advisorTone: user.configuracion?.advisorTone || 'amable',
+    currency: user.configuracion?.currency || 'USD',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -50,6 +54,15 @@ const Profile = ({ user, onUserUpdate }) => {
       }
 
       // Update user
+      // Add configuracion object
+      updateData.configuracion = {
+        ...(user.configuracion || {}),
+        monthlyIncome: formData.monthlyIncome,
+        riskProfile: formData.riskProfile,
+        advisorTone: formData.advisorTone,
+        currency: formData.currency
+      }
+
       const { error } = await supabase
         .from('usuarios')
         .update(updateData)
@@ -61,7 +74,7 @@ const Profile = ({ user, onUserUpdate }) => {
       setMessageType('success')
 
       // Update local user data
-      onUserUpdate({ ...user, ...updateData })
+      onUserUpdate({ ...user, ...updateData, configuracion: updateData.configuracion })
 
       // Reset password fields
       setFormData(prev => ({
@@ -140,6 +153,49 @@ const Profile = ({ user, onUserUpdate }) => {
               className="form-input"
               required
             />
+          </div>
+
+          <div className="section-divider">
+            <span>Preferencias</span>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Ingreso Mensual</label>
+            <input
+              type="number"
+              name="monthlyIncome"
+              value={formData.monthlyIncome}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Ej. 2500"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Perfil de Riesgo</label>
+            <select name="riskProfile" value={formData.riskProfile} onChange={handleChange} className="form-input">
+              <option value="conservador">Conservador</option>
+              <option value="moderado">Moderado</option>
+              <option value="agresivo">Agresivo</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tono del Asesor</label>
+            <select name="advisorTone" value={formData.advisorTone} onChange={handleChange} className="form-input">
+              <option value="amable">Amable</option>
+              <option value="directo">Directo</option>
+              <option value="analitico">Analítico</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Moneda</label>
+            <select name="currency" value={formData.currency} onChange={handleChange} className="form-input">
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="MXN">MXN</option>
+            </select>
           </div>
 
           <div className="section-divider">

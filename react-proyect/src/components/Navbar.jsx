@@ -65,12 +65,15 @@ const Navbar = ({ user, onLogout }) => {
     setIsThinking(true)
 
     try {
+      // Prepare user preferences from profile (if available)
+      const storage = JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}')
       const reply = await getFinancialAdvisorReply({
         message: userMessage,
-        transactions: JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}').transacciones || [],
-        budgets: JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}').presupuestos || [],
-        goals: JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}').metas_financieras || [],
-        userName: user.nombre || 'usuario'
+        transactions: storage.transacciones || [],
+        budgets: storage.presupuestos || [],
+        goals: storage.metas_financieras || [],
+        userName: user.nombre || 'usuario',
+        userPreferences: user.configuracion || {}
       })
 
       setMessages(prev => [...prev, { sender: 'assistant', text: reply }])

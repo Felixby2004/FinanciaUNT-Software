@@ -5,6 +5,7 @@ import { generatePDFReport } from '../../lib/pdfGenerator'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement } from 'chart.js'
 import { Doughnut, Bar, Line } from 'react-chartjs-2'
 import './ClientPages.css'
+import CurrencyRates from './CurrencyRates'
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement)
@@ -167,6 +168,20 @@ const Dashboard = ({ userId, userName }) => {
           )}
         </div>
       )}
+
+      {/* Currency Rates */}
+      {(() => {
+        let base = 'USD'
+        try {
+          const store = JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}')
+          const usuarios = store.usuarios || []
+          const me = usuarios.find(u => u.id === userId)
+          base = me?.configuracion?.currency || 'USD'
+        } catch (e) {
+          base = 'USD'
+        }
+        return <CurrencyRates baseCurrency={base} showCurrencies={['USD','EUR','MXN','GBP','JPY']} />
+      })()}
 
       {/* Charts Section */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '24px' }}>
