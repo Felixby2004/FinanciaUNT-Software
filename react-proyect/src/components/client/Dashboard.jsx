@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { RecommenderComparator } from '../../lib/recommenders'
+import { RecommenderComparator, predictNextMonth } from '../../lib/recommenders'
 import { generatePDFReport } from '../../lib/pdfGenerator'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement } from 'chart.js'
 import { Doughnut, Bar, Line } from 'react-chartjs-2'
@@ -20,6 +20,7 @@ const Dashboard = ({ userId, userName }) => {
   const [goals, setGoals] = useState([])
   const [allTransactions, setAllTransactions] = useState([])
   const [recommendations, setRecommendations] = useState(null)
+  const [prediction, setPrediction] = useState(null)
   const [loading, setLoading] = useState(true)
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
@@ -76,6 +77,7 @@ const Dashboard = ({ userId, userName }) => {
         const comparator = new RecommenderComparator()
         const recs = comparator.getAllRecommendations(transactions, allTrans || [], budgetsData || [], goalsData || [])
         setRecommendations(recs)
+        setPrediction(predictNextMonth(transactions, budgetsData || []))
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -139,6 +141,32 @@ const Dashboard = ({ userId, userName }) => {
           </div>
         </div>
       </div>
+
+      {prediction && (
+        <div className="section" style={{ background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.14) 100%)', border: '1px solid rgba(102, 126, 234, 0.25)' }}>
+          <h2 className="section-title">🔮 Predicción del próximo mes</h2>
+          <p style={{ marginBottom: '10px' }}>{prediction.recommendation}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
+            <div className="stat-card" style={{ minHeight: 'auto' }}>
+              <p className="stat-label">Ingreso proyectado</p>
+              <p className="stat-value stat-income">${prediction.projectedIncome.toLocaleString()}</p>
+            </div>
+            <div className="stat-card" style={{ minHeight: 'auto' }}>
+              <p className="stat-label">Gasto proyectado</p>
+              <p className="stat-value stat-expense">${prediction.projectedExpense.toLocaleString()}</p>
+            </div>
+            <div className="stat-card" style={{ minHeight: 'auto' }}>
+              <p className="stat-label">Ahorro proyectado</p>
+              <p className={`stat-value ${prediction.projectedSavings >= 0 ? 'stat-income' : 'stat-expense'}`}>${prediction.projectedSavings.toLocaleString()}</p>
+            </div>
+          </div>
+          {prediction.budgetAtRisk && (
+            <p style={{ marginTop: '10px', color: '#7c3aed' }}>
+              Presupuesto en riesgo: <strong>{prediction.budgetAtRisk}</strong>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Charts Section */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '24px' }}>

@@ -1,12 +1,22 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, MessageSquare, User, LogOut } from 'lucide-react'
+import { getFinancialAdvisorReply } from '../lib/openaiService'
 
 const Navbar = ({ user, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [messages, setMessages] = useState([
+    {
+      sender: 'assistant',
+      text: '¡Hola! 👋 Soy tu asistente financiero de FinanciaUNT. ¿En qué puedo ayudarte hoy?'
+    }
+  ])
+  const [draft, setDraft] = useState('')
+  const [isThinking, setIsThinking] = useState(false)
   const location = useLocation()
   const isAdmin = user.rol === 'admin'
+  const hasAiAccess = ['premium', 'enterprise'].includes(user.plan_suscripcion || '')
 
   const navLinks = isAdmin
     ? [
@@ -21,6 +31,55 @@ const Navbar = ({ user, onLogout }) => {
       ]
 
   const isActive = (to) => location.pathname === to
+
+  const handleOpenChat = () => {
+    if (!hasAiAccess) {
+      setMessages([
+        {
+          sender: 'assistant',
+          text: 'Este chat con IA está disponible solo para usuarios con plan Premium o Enterprise. Actualiza tu plan para activar esta función.'
+        }
+      ])
+      setDraft('')
+      setIsChatOpen(true)
+      return
+    }
+
+    setMessages([
+      {
+        sender: 'assistant',
+        text: '¡Hola! 👋 Soy tu asistente financiero de FinanciaUNT. ¿En qué puedo ayudarte hoy?'
+      }
+    ])
+    setDraft('')
+    setIsChatOpen(true)
+  }
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault()
+    if (!draft.trim()) return
+
+    const userMessage = draft.trim()
+    setMessages(prev => [...prev, { sender: 'user', text: userMessage }])
+    setDraft('')
+    setIsThinking(true)
+
+    try {
+      const reply = await getFinancialAdvisorReply({
+        message: userMessage,
+        transactions: JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}').transacciones || [],
+        budgets: JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}').presupuestos || [],
+        goals: JSON.parse(localStorage.getItem('financiaunt_local_data') || '{}').metas_financieras || [],
+        userName: user.nombre || 'usuario'
+      })
+
+      setMessages(prev => [...prev, { sender: 'assistant', text: reply }])
+    } catch (error) {
+      setMessages(prev => [...prev, { sender: 'assistant', text: 'No pude responder en este momento. Inténtalo otra vez.' }])
+    } finally {
+      setIsThinking(false)
+    }
+  }
 
   return (
     <>
@@ -47,7 +106,7 @@ const Navbar = ({ user, onLogout }) => {
           <div className="navbar-actions">
             <button
               className="navbar-icon-button"
-              onClick={() => setIsChatOpen(true)}
+              onClick={handleOpenChat}
               title="Chat Financiero"
             >
               <MessageSquare size={20} />
@@ -94,7 +153,7 @@ const Navbar = ({ user, onLogout }) => {
             <button
               className="navbar-mobile-link"
               onClick={() => {
-                setIsChatOpen(true)
+                handleOpenChat()
                 setIsMobileMenuOpen(false)
               }}
             >
@@ -127,20 +186,33 @@ const Navbar = ({ user, onLogout }) => {
             </div>
             <div className="offcanvas-body">
               <div className="chat-messages">
-                <div className="chat-message assistant">
-                  ¡Hola! 👋 Soy tu asistente financiero de FinanciaUNT. ¿En qué puedo ayudarte hoy?
-                </div>
+                {messages.map((message, index) => (
+                  <div key={index} className={`chat-message ${message.sender}`}>
+                    {message.text}
+                  </div>
+                ))}
+                {isThinking && hasAiAccess && (
+                  <div className="chat-message assistant">Estoy pensando una respuesta...</div>
+                )}
               </div>
-              <div className="chat-input-container">
+              {hasAiAccess ? (
+                <form className="chat-input-container" onSubmit={handleSendMessage}>
                 <input
                   type="text"
                   className="chat-input"
                   placeholder="Escribe tu mensaje aquí..."
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
                 />
-                <button className="chat-send-button">
-                  ➤
-                </button>
-              </div>
+                  <button className="chat-send-button" type="submit">
+                    ➤
+                  </button>
+                </form>
+              ) : (
+                <div className="chat-message assistant" style={{ marginTop: '8px' }}>
+                  Actualiza tu plan para desbloquear el asistente financiero con IA.
+                </div>
+              )}
             </div>
           </div>
         </div>
