@@ -1,0 +1,120 @@
+.ai-recommendations {
+  padding: 1rem;
+}
+
+.tabs-container {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: var(--hover-bg, #f1f5f9);
+}
+
+.tab-btn.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.model-section-card {
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.model-header:hover {
+  background: var(--hover-bg, #f1f5f9);
+}
+
+.recommendation-card {
+  transition: all 0.2s ease;
+}
+
+.recommendation-card:hover {
+  transform: translateX(4px);
+}
+
+.recommendation-card.accepted {
+  opacity: 0.7;
+}
+
+.accept-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background 0.2s;
+}
+
+.accept-btn:hover {
+  background: #5a6fd1;
+}
+
+.comparator-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] .tab-btn:hover {
+  background: #1e2a4a;
+}
+
+[data-theme="dark"] .model-header:hover {
+  background: #1e2a4a;
+}
+
+[data-theme="dark"] .recommendation-card {
+  background: #1e2a4a;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 1.1rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
