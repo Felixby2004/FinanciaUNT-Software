@@ -3,11 +3,13 @@ import { supabase } from '../../lib/supabase'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import { Users, CreditCard, TrendingUp, TrendingDown } from 'lucide-react'
+import { useLanguage } from '../../contexts/LanguageContext'
 import './AdminPages.css'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title)
 
 const Statistics = () => {
+  const { t } = useLanguage()
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTransactions: 0,
@@ -53,7 +55,7 @@ const Statistics = () => {
 
       const expensesList = Object.entries(userExpenses).map(([userId, amount]) => ({
         id: userId,
-        nombre: userMap[userId] || 'Usuario Desconocido',
+        nombre: userMap[userId] || t('user'),
         monto: amount
       })).sort((a, b) => b.monto - a.monto)
 
@@ -72,38 +74,38 @@ const Statistics = () => {
   }
 
   if (loading) {
-    return <div className="loading">Cargando estadísticas...</div>
+    return <div className="loading">{t('loadingStats')}</div>
   }
 
   return (
     <div className="admin-page">
-      <h1 className="page-title">Estadísticas Generales</h1>
+      <h1 className="page-title">{t('generalStats')}</h1>
 
       <div className="stats-grid">
         <div className="stat-item">
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users size={16} /> Total Usuarios
+            <Users size={16} /> {t('totalUsers')}
           </span>
           <span className="stat-value">{stats.totalUsers}</span>
         </div>
 
         <div className="stat-item">
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CreditCard size={16} /> Total Transacciones
+            <CreditCard size={16} /> {t('totalTransactions')}
           </span>
           <span className="stat-value">{stats.totalTransactions}</span>
         </div>
 
         <div className="stat-item">
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-green)' }}>
-            <TrendingUp size={16} /> Ingresos Totales
+            <TrendingUp size={16} /> {t('totalIncome')}
           </span>
           <span className="stat-value" style={{ color: 'var(--accent-green)' }}>${stats.totalIncome.toLocaleString()}</span>
         </div>
 
         <div className="stat-item">
           <span className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-red)' }}>
-            <TrendingDown size={16} /> Gastos Totales
+            <TrendingDown size={16} /> {t('totalExpenses')}
           </span>
           <span className="stat-value" style={{ color: 'var(--accent-red)' }}>${stats.totalExpenses.toLocaleString()}</span>
         </div>
@@ -113,7 +115,7 @@ const Statistics = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '24px' }}>
         {/* Gastos por Usuario - Bar Chart */}
         <div className="chart-container">
-          <h2 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>Gastos por Usuario</h2>
+          <h2 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>{t('expensesByUser')}</h2>
           {(() => {
             const labels = expensesByUser.map(u => u.nombre);
             const data = expensesByUser.map(u => u.monto);
@@ -125,7 +127,7 @@ const Statistics = () => {
             const chartData = {
               labels,
               datasets: [{
-                label: 'Total Gastos',
+                label: t('totalExpenses'),
                 data,
                 backgroundColor: colors.slice(0, labels.length),
                 borderColor: colors.slice(0, labels.length),
@@ -153,16 +155,16 @@ const Statistics = () => {
                 <Bar data={chartData} options={chartOptions} />
               </div>
             ) : (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>No hay datos para mostrar</div>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>{t('noData')}</div>
             );
           })()}
         </div>
 
         {/* Resumen Ingresos vs Gastos - Doughnut Chart */}
         <div className="chart-container">
-          <h2 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>Resumen Ingresos vs Gastos</h2>
+          <h2 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>{t('incomeVsExpenses')}</h2>
           {(() => {
-            const labels = ['Ingresos', 'Gastos'];
+            const labels = [t('totalIncome'), t('totalExpenses')];
             const data = [stats.totalIncome, stats.totalExpenses];
             const colors = ['#34d399', '#f87171'];
             
@@ -191,21 +193,21 @@ const Statistics = () => {
                 <Doughnut data={chartData} options={chartOptions} />
               </div>
             ) : (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>No hay datos para mostrar</div>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>{t('noData')}</div>
             );
           })()}
         </div>
       </div>
 
       <div className="chart-container">
-        <h2 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>Gastos por Usuario</h2>
+        <h2 style={{ marginTop: 0, marginBottom: '16px', color: 'var(--text-primary)' }}>{t('expensesByUser')}</h2>
         {expensesByUser.length > 0 ? (
           <div className="table-container" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Usuario</th>
-                  <th>Total Gastos</th>
+                  <th>{t('user')}</th>
+                  <th>{t('totalExpenses')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,7 +221,7 @@ const Statistics = () => {
             </table>
           </div>
         ) : (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>No hay datos de gastos</div>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>{t('noExpenseData')}</div>
         )}
       </div>
     </div>

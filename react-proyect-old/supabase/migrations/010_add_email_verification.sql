@@ -1,0 +1,5 @@
+
+ALTER TABLE usuarios 
+ADD COLUMN IF NOT EXISTS verification_code TEXT,
+ADD COLUMN IF NOT EXISTS verification_code_expires_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;

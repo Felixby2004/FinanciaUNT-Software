@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useLanguage } from '../../contexts/LanguageContext'
 import './ClientPages.css'
 
 const Transactions = ({ userId }) => {
+  const { t } = useLanguage()
   const [transactions, setTransactions] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -60,7 +62,7 @@ const Transactions = ({ userId }) => {
   }
 
   const handleDeleteTransaction = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar esta transacción?')) {
+    if (window.confirm(t('confirmDelete'))) {
       try {
         await supabase.from('transacciones').delete().eq('id', id)
         fetchTransactions()
@@ -76,15 +78,15 @@ const Transactions = ({ userId }) => {
   ]
 
   if (loading) {
-    return <div className="loading">Cargando transacciones...</div>
+    return <div className="loading">{t('loading')}</div>
   }
 
   return (
     <div className="client-page">
       <div className="page-header">
-        <h1 className="page-title">Transacciones</h1>
+        <h1 className="page-title">{t('transactions')}</h1>
         <button className="primary-button" onClick={() => setShowModal(true)}>
-          ➕ Nueva Transacción
+          ➕ {t('newTransaction')}
         </button>
       </div>
 
@@ -117,26 +119,26 @@ const Transactions = ({ userId }) => {
       </div>
 
       {transactions.length === 0 && (
-        <div className="empty-state">No hay transacciones registradas</div>
+        <div className="empty-state">{t('noTransactionsYet')}</div>
       )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">Nueva Transacción</h2>
+            <h2 className="modal-title">{t('newTransaction')}</h2>
             <form onSubmit={handleCreateTransaction} className="modal-form">
               <div className="form-group">
-                <label>Tipo</label>
+                <label>{t('type')}</label>
                 <select
                   value={newTransaction.tipo}
                   onChange={(e) => setNewTransaction({ ...newTransaction, tipo: e.target.value })}
                 >
-                  <option value="gasto">Gasto</option>
-                  <option value="ingreso">Ingreso</option>
+                  <option value="gasto">{t('expense')}</option>
+                  <option value="ingreso">{t('income')}</option>
                 </select>
               </div>
               <div className="form-group">
-                <label>Monto</label>
+                <label>{t('amount')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -146,7 +148,7 @@ const Transactions = ({ userId }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Categoría</label>
+                <label>{t('category')}</label>
                 <select
                   value={newTransaction.categoria}
                   onChange={(e) => setNewTransaction({ ...newTransaction, categoria: e.target.value })}
@@ -155,7 +157,7 @@ const Transactions = ({ userId }) => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Descripción</label>
+                <label>{t('description')}</label>
                 <input
                   type="text"
                   value={newTransaction.descripcion}
@@ -163,7 +165,7 @@ const Transactions = ({ userId }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Fecha</label>
+                <label>{t('date')}</label>
                 <input
                   type="date"
                   value={newTransaction.fecha}
@@ -172,7 +174,7 @@ const Transactions = ({ userId }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Cuenta</label>
+                <label>{t('account')}</label>
                 <input
                   type="text"
                   value={newTransaction.cuenta}
@@ -185,10 +187,10 @@ const Transactions = ({ userId }) => {
                   className="secondary-button"
                   onClick={() => setShowModal(false)}
                 >
-                  Cancelar
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="primary-button">
-                  Crear
+                  {t('save')}
                 </button>
               </div>
             </form>
