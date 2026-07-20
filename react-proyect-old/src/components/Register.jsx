@@ -4,7 +4,7 @@ import { supabase, hashPassword } from '../lib/supabase';
 import { Sun, Moon, Globe, User, Mail, Lock, Check, Loader2, CreditCard } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { requestVerificationCode, verifyCode } from '../lib/emailUtils';
+import { requestVerificationCode, verifyCode } from '../lib/emailUtils.js';
 import './Auth.css';
 
 const Register = () => {
