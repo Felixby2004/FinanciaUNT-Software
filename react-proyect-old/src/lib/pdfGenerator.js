@@ -66,14 +66,13 @@ export const generatePDFReport = ({
       doc.setLineDashPattern([], 0);
     }
     doc.line(x, y, x + width, y);
-    doc.setLineDashPattern([], 0); // reset
+    doc.setLineDashPattern([], 0);
   };
 
   const addSectionTitle = (title, icon = '◆') => {
     if (yPosition > 250) {
       doc.addPage();
       yPosition = 30;
-      addHeaderFooter(doc, plan);
     }
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
@@ -84,111 +83,7 @@ export const generatePDFReport = ({
     yPosition += 6;
   };
 
-  const addHeaderFooter = (doc, plan) => {
-    const pageCount = doc.internal.getNumberOfPages();
-    const currentPage = doc.internal.getCurrentPage();
-    // Encabezado en todas las páginas (excepto la portada)
-    if (currentPage > 1) {
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...COLORS.muted);
-      doc.text('FinanciaUNT · Reporte financiero', margin, 10);
-      const planLabels = { basic: 'Básico', premium: 'Premium', enterprise: 'Enterprise' };
-      doc.text(`Plan: ${planLabels[plan] || plan}`, pageWidth - margin, 10, { align: 'right' });
-      addLine(margin, 13, pageWidth - margin * 2, COLORS.light);
-    }
-    // Pie de página (todas)
-    doc.setDrawColor(...COLORS.light);
-    doc.setLineWidth(0.3);
-    doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.gray);
-    doc.text(
-      `FinanciaUNT · ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`,
-      margin,
-      pageHeight - 8
-    );
-    doc.text(
-      `Página ${currentPage}`,
-      pageWidth - margin,
-      pageHeight - 8,
-      { align: 'right' }
-    );
-  };
-
-  // ==================== PORTADA ====================
-  const addCover = () => {
-    doc.setPage(1);
-    // Fondo degradado (simulado con rectángulos)
-    doc.setFillColor(245, 247, 250);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-    // Línea decorativa superior
-    doc.setFillColor(...COLORS.primary);
-    doc.rect(0, 0, pageWidth, 6, 'F');
-
-    // Logo (textual)
-    doc.setFontSize(48);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...COLORS.primary);
-    doc.text('FinanciaUNT', pageWidth / 2, 80, { align: 'center' });
-
-    // Línea decorativa
-    doc.setDrawColor(...COLORS.secondary);
-    doc.setLineWidth(1);
-    doc.line(pageWidth / 2 - 40, 90, pageWidth / 2 + 40, 90);
-
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...COLORS.dark);
-    doc.text('Reporte Financiero', pageWidth / 2, 110, { align: 'center' });
-
-    doc.setFontSize(12);
-    doc.setTextColor(...COLORS.gray);
-    doc.text(`Generado para: ${userName}`, pageWidth / 2, 140, { align: 'center' });
-    doc.text(
-      `Fecha: ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
-      pageWidth / 2,
-      155,
-      { align: 'center' }
-    );
-
-    // Badge de plan
-    const planLabels = { basic: 'Básico', premium: 'Premium', enterprise: 'Enterprise' };
-    const planColors = { basic: COLORS.gray, premium: COLORS.primary, enterprise: COLORS.secondary };
-    const badgeColor = planColors[plan] || COLORS.gray;
-    doc.setFillColor(...badgeColor);
-    doc.setDrawColor(...badgeColor);
-    doc.roundedRect(pageWidth / 2 - 25, 175, 50, 10, 5, 5, 'F');
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text(planLabels[plan] || plan, pageWidth / 2, 182.5, { align: 'center' });
-
-    // Resumen de actividad (solo si hay transacciones)
-    if (transactions.length > 0) {
-      const totalTx = transactions.length;
-      const incomeTx = transactions.filter(t => t.tipo === 'ingreso').length;
-      const expenseTx = transactions.filter(t => t.tipo === 'gasto').length;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...COLORS.gray);
-      doc.text(
-        `Transacciones: ${totalTx}  ·  Ingresos: ${incomeTx}  ·  Gastos: ${expenseTx}`,
-        pageWidth / 2,
-        205,
-        { align: 'center' }
-      );
-    }
-
-    // Pie de portada
-    doc.setFontSize(9);
-    doc.setTextColor(...COLORS.muted);
-    doc.text('Generado automáticamente por FinanciaUNT', pageWidth / 2, pageHeight - 20, { align: 'center' });
-  };
-
-  // ==================== MÉTRICAS Y DATOS ====================
+  // ==================== MÉTRICAS ====================
   const totalIncome = transactions.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0);
   const totalExpenses = transactions.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0);
   const netSavings = totalIncome - totalExpenses;
@@ -232,12 +127,74 @@ export const generatePDFReport = ({
     }
   }
 
+  // ==================== PORTADA ====================
+  const addCover = () => {
+    doc.setPage(1);
+    doc.setFillColor(245, 247, 250);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    doc.setFillColor(...COLORS.primary);
+    doc.rect(0, 0, pageWidth, 6, 'F');
+
+    doc.setFontSize(48);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.primary);
+    doc.text('FinanciaUNT', pageWidth / 2, 80, { align: 'center' });
+
+    doc.setDrawColor(...COLORS.secondary);
+    doc.setLineWidth(1);
+    doc.line(pageWidth / 2 - 40, 90, pageWidth / 2 + 40, 90);
+
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.dark);
+    doc.text('Reporte Financiero', pageWidth / 2, 110, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.gray);
+    doc.text(`Generado para: ${userName}`, pageWidth / 2, 140, { align: 'center' });
+    doc.text(
+      `Fecha: ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      pageWidth / 2,
+      155,
+      { align: 'center' }
+    );
+
+    const planLabels = { basic: 'Básico', premium: 'Premium', enterprise: 'Enterprise' };
+    const planColors = { basic: COLORS.gray, premium: COLORS.primary, enterprise: COLORS.secondary };
+    const badgeColor = planColors[plan] || COLORS.gray;
+    doc.setFillColor(...badgeColor);
+    doc.setDrawColor(...badgeColor);
+    doc.roundedRect(pageWidth / 2 - 25, 175, 50, 10, 5, 5, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text(planLabels[plan] || plan, pageWidth / 2, 182.5, { align: 'center' });
+
+    if (transactions.length > 0) {
+      const totalTx = transactions.length;
+      const incomeTx = transactions.filter(t => t.tipo === 'ingreso').length;
+      const expenseTx = transactions.filter(t => t.tipo === 'gasto').length;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...COLORS.gray);
+      doc.text(
+        `Transacciones: ${totalTx}  ·  Ingresos: ${incomeTx}  ·  Gastos: ${expenseTx}`,
+        pageWidth / 2,
+        205,
+        { align: 'center' }
+      );
+    }
+
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.muted);
+    doc.text('Generado automáticamente por FinanciaUNT', pageWidth / 2, pageHeight - 20, { align: 'center' });
+  };
+
   // ==================== CONSTRUCCIÓN DEL PDF ====================
   // Portada
   addCover();
   doc.addPage();
   yPosition = 30;
-  addHeaderFooter(doc, plan);
 
   // -------------------- 1. Resumen Ejecutivo --------------------
   doc.setFontSize(18);
@@ -256,7 +213,6 @@ export const generatePDFReport = ({
   );
   yPosition += 6;
 
-  // Tarjetas de resumen (3 columnas)
   const cardWidth = (pageWidth - margin * 2 - 6) / 3;
   const startX = margin;
 
@@ -280,7 +236,7 @@ export const generatePDFReport = ({
   renderCard(startX + cardWidth * 2 + 6, yPosition, 'Ahorro Neto', formatCurrency(netSavings), netSavings >= 0 ? COLORS.success : COLORS.danger, [220, 252, 231], '💰');
   yPosition += 26;
 
-  // Segunda fila de métricas
+  // Segunda fila
   const row2 = yPosition;
   doc.setFillColor([245, 247, 250]);
   doc.setDrawColor(...COLORS.light);
@@ -289,7 +245,6 @@ export const generatePDFReport = ({
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.gray);
   doc.text(`Tasa de ahorro: ${savingsRate.toFixed(1)}%`, margin + 6, row2 + 7);
-  // Barra de progreso
   const barWidth = 40;
   const barX = margin + 50;
   const barY = row2 + 4;
@@ -299,19 +254,14 @@ export const generatePDFReport = ({
   const progress = Math.min(Math.max(savingsRate / 100, 0), 1);
   doc.setFillColor(...COLORS.primary);
   doc.rect(barX, barY, barWidth * progress, 5, 'F');
-  // Otros datos
   doc.text(`Promedio diario: ${formatCurrency(avgDailyExpense)}`, margin + 100, row2 + 7);
   doc.text(`Categoría top: ${topCategory} (${formatCurrency(topCategoryAmount)})`, margin + 180, row2 + 7);
-
   yPosition = row2 + 24;
 
   // -------------------- 2. Gastos por Categoría --------------------
   if (Object.keys(expensesByCategory).length > 0) {
     addSectionTitle('Gastos por Categoría', '◆');
-
-    const sortedCategories = Object.entries(expensesByCategory)
-      .sort((a, b) => b[1] - a[1]);
-
+    const sortedCategories = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1]);
     const tableData = sortedCategories.map(([cat, amount]) => {
       const percent = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
       const barLength = Math.round((percent / 100) * 20);
@@ -331,14 +281,8 @@ export const generatePDFReport = ({
         fontStyle: 'bold',
         halign: 'center',
       },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
-        valign: 'middle',
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      bodyStyles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         0: { cellWidth: 'auto', halign: 'left' },
         1: { cellWidth: 30, halign: 'right' },
@@ -347,22 +291,13 @@ export const generatePDFReport = ({
       },
       margin: { left: margin },
       tableWidth: pageWidth - margin * 2,
-      didDrawCell: (data) => {
-        if (data.section === 'body' && data.column.index === 3) {
-          // Mostrar la barra en color según porcentaje
-          const percent = parseFloat(data.cell.raw.replace(',', '.')) || 0;
-          const color = percent > 70 ? COLORS.danger : percent > 40 ? COLORS.warning : COLORS.success;
-          doc.setTextColor(...color);
-        }
-      },
     });
     yPosition = doc.lastAutoTable.finalY + 10;
   }
 
-  // -------------------- 3. Comparación con Presupuestos --------------------
+  // -------------------- 3. Presupuestos --------------------
   if (budgets.length > 0 && transactions.length > 0) {
     addSectionTitle('Comparación con Presupuestos', '◆');
-
     const budgetData = budgets.map((budget) => {
       const spent = expensesByCategory[budget.categoria] || 0;
       const percent = budget.monto_maximo > 0 ? (spent / budget.monto_maximo) * 100 : 0;
@@ -384,14 +319,8 @@ export const generatePDFReport = ({
         fontStyle: 'bold',
         halign: 'center',
       },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
-        valign: 'middle',
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      bodyStyles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         0: { cellWidth: 'auto', halign: 'left' },
         1: { cellWidth: 25, halign: 'right' },
@@ -405,18 +334,16 @@ export const generatePDFReport = ({
       didDrawCell: (data) => {
         if (data.section === 'body' && data.column.index === 5) {
           const status = budgetData[data.row.index]?.[5] || '';
-          const isExceeded = status.includes('Excedido');
-          doc.setTextColor(isExceeded ? 239 : 34, isExceeded ? 68 : 197, isExceeded ? 68 : 94);
+          doc.setTextColor(status.includes('Excedido') ? 239 : 34, status.includes('Excedido') ? 68 : 197, status.includes('Excedido') ? 68 : 94);
         }
       },
     });
     yPosition = doc.lastAutoTable.finalY + 10;
   }
 
-  // -------------------- 4. Metas Financieras --------------------
+  // -------------------- 4. Metas --------------------
   if (goals.length > 0) {
     addSectionTitle('Metas Financieras', '◆');
-
     const goalsData = goals.map((goal) => {
       const progress = goal.monto_objetivo > 0 ? (goal.monto_actual / goal.monto_objetivo) * 100 : 0;
       const status = progress >= 100 ? 'Lograda ✓' : 'En progreso';
@@ -446,14 +373,8 @@ export const generatePDFReport = ({
         fontStyle: 'bold',
         halign: 'center',
       },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
-        valign: 'middle',
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      bodyStyles: { fontSize: 8, cellPadding: 3, valign: 'middle' },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         0: { cellWidth: 'auto', halign: 'left' },
         1: { cellWidth: 20, halign: 'right' },
@@ -475,10 +396,9 @@ export const generatePDFReport = ({
     yPosition = doc.lastAutoTable.finalY + 10;
   }
 
-  // -------------------- 5. Recomendaciones IA (Premium/Enterprise) --------------------
+  // -------------------- 5. Recomendaciones IA (Premium+) --------------------
   if (plan !== 'basic' && recommendations && recommendations.length > 0) {
     addSectionTitle('Recomendaciones IA Aplicadas', '◆');
-
     const recData = recommendations.map((rec, idx) => [
       `${idx + 1}`,
       rec.description || rec.recommendation || 'Sin descripción',
@@ -498,13 +418,8 @@ export const generatePDFReport = ({
         fontStyle: 'bold',
         halign: 'center',
       },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      bodyStyles: { fontSize: 8, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
         1: { cellWidth: 'auto', halign: 'left' },
@@ -517,11 +432,10 @@ export const generatePDFReport = ({
     yPosition = doc.lastAutoTable.finalY + 10;
   }
 
-  // -------------------- 6. Pronóstico (Premium/Enterprise) --------------------
+  // -------------------- 6. Pronóstico (Premium+) --------------------
   if (plan !== 'basic' && prediction) {
     const forecastMonths = plan === 'enterprise' ? 12 : 3;
     addSectionTitle(`Pronóstico a ${forecastMonths} meses`, '◆');
-
     const monthLabels = [];
     const incomeForecast = [];
     const expenseForecast = [];
@@ -561,13 +475,8 @@ export const generatePDFReport = ({
         fontStyle: 'bold',
         halign: 'center',
       },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      bodyStyles: { fontSize: 8, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         0: { cellWidth: 'auto', halign: 'center' },
         1: { cellWidth: 'auto', halign: 'right' },
@@ -580,10 +489,9 @@ export const generatePDFReport = ({
     yPosition = doc.lastAutoTable.finalY + 10;
   }
 
-  // -------------------- 7. Auditoría de Anomalías (Enterprise) --------------------
+  // -------------------- 7. Anomalías (Enterprise) --------------------
   if (plan === 'enterprise') {
     addSectionTitle('Auditoría de Anomalías', '◆');
-
     const expenseList = transactions.filter(t => t.tipo === 'gasto').map(t => t.monto);
     const avg = expenseList.reduce((s, v) => s + v, 0) / (expenseList.length || 1);
     const std = Math.sqrt(
@@ -616,13 +524,8 @@ export const generatePDFReport = ({
           fontStyle: 'bold',
           halign: 'center',
         },
-        bodyStyles: {
-          fontSize: 8,
-          cellPadding: 3,
-        },
-        alternateRowStyles: {
-          fillColor: [245, 247, 250],
-        },
+        bodyStyles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
         columnStyles: {
           0: { cellWidth: 'auto', halign: 'center' },
           1: { cellWidth: 'auto', halign: 'left' },
@@ -647,7 +550,6 @@ export const generatePDFReport = ({
   const txLimit = plan === 'basic' ? 10 : plan === 'premium' ? 20 : 30;
   if (transactions.length > 0) {
     addSectionTitle(`Transacciones Recientes (últimas ${txLimit})`, '◆');
-
     const recentTx = [...transactions]
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
       .slice(0, txLimit)
@@ -672,13 +574,8 @@ export const generatePDFReport = ({
         fontStyle: 'bold',
         halign: 'center',
       },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250],
-      },
+      bodyStyles: { fontSize: 8, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
       columnStyles: {
         0: { cellWidth: 'auto', halign: 'center' },
         1: { cellWidth: 'auto', halign: 'left' },
@@ -701,30 +598,21 @@ export const generatePDFReport = ({
   // -------------------- 9. Consejos Financieros --------------------
   addSectionTitle('Consejos Financieros', '💡');
   const tips = [];
-  if (netSavings < 0) {
-    tips.push('Tus gastos superan tus ingresos. Considera reducir gastos no esenciales.');
-  }
-  if (savingsRate < 10 && totalIncome > 0) {
-    tips.push('Tu tasa de ahorro es baja. Intenta ahorrar al menos el 10% de tus ingresos.');
-  }
+  if (netSavings < 0) tips.push('Tus gastos superan tus ingresos. Considera reducir gastos no esenciales.');
+  if (savingsRate < 10 && totalIncome > 0) tips.push('Tu tasa de ahorro es baja. Intenta ahorrar al menos el 10% de tus ingresos.');
   if (topCategory && topCategoryAmount > totalExpenses * 0.4) {
     tips.push(`Tu gasto en "${topCategory}" representa más del 40% de tus gastos totales. Revisa si puedes reducirlo.`);
   }
-  if (transactions.length < 5) {
-    tips.push('Registra más transacciones para obtener análisis más precisos y mejores recomendaciones.');
-  }
-  if (tips.length === 0) {
-    tips.push('¡Buen trabajo! Tus finanzas están en buen camino. Sigue así.');
-  }
+  if (transactions.length < 5) tips.push('Registra más transacciones para obtener análisis más precisos y mejores recomendaciones.');
+  if (tips.length === 0) tips.push('¡Buen trabajo! Tus finanzas están en buen camino. Sigue así.');
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.dark);
-  tips.forEach((tip, idx) => {
+  tips.forEach((tip) => {
     if (yPosition > 250) {
       doc.addPage();
       yPosition = 30;
-      addHeaderFooter(doc, plan);
     }
     doc.text(`• ${tip}`, margin + 2, yPosition);
     yPosition += 7;
@@ -734,7 +622,6 @@ export const generatePDFReport = ({
   // -------------------- 10. Página de cierre --------------------
   doc.addPage();
   yPosition = 80;
-  addHeaderFooter(doc, plan);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.primary);
@@ -751,12 +638,36 @@ export const generatePDFReport = ({
   doc.setTextColor(...COLORS.muted);
   doc.text(`Reporte generado el ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`, pageWidth / 2, yPosition + 80, { align: 'center' });
 
-  // ==================== FIN ====================
-  // Aplicar encabezados/pies en todas las páginas
+  // ==================== ENCABEZADO Y PIE EN TODAS LAS PÁGINAS ====================
   const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
+  const planLabels = { basic: 'Básico', premium: 'Premium', enterprise: 'Enterprise' };
+  for (let i = 2; i <= pageCount; i++) {
     doc.setPage(i);
-    addHeaderFooter(doc, plan);
+    // Encabezado
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.muted);
+    doc.text('FinanciaUNT · Reporte financiero', margin, 10);
+    doc.text(`Plan: ${planLabels[plan] || plan}`, pageWidth - margin, 10, { align: 'right' });
+    addLine(margin, 13, pageWidth - margin * 2, COLORS.light);
+    // Pie de página
+    doc.setDrawColor(...COLORS.light);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.gray);
+    doc.text(
+      `FinanciaUNT · ${new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+      margin,
+      pageHeight - 8
+    );
+    doc.text(
+      `Página ${i}`,
+      pageWidth - margin,
+      pageHeight - 8,
+      { align: 'right' }
+    );
   }
 
   // Guardar PDF
