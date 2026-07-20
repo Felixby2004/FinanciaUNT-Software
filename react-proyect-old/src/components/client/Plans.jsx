@@ -4,7 +4,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase.js';
 import { requestVerificationCode, verifyCode } from '../../lib/emailUtils.js';
-import './Plans.css';
 
 const Plans = ({ user, onUserUpdate, onLogout }) => {
   const { t } = useLanguage();
