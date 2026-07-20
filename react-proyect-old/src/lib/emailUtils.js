@@ -1,6 +1,8 @@
 // src/lib/emailUtils.js
 import { supabase } from './supabase';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api'; // en producción usará la raíz del dominio
+
 /**
  * Solicita un código de verificación para el email dado.
  * Guarda el código en la tabla `email_verification_codes` y envía el email.
@@ -16,38 +18,30 @@ export const requestVerificationCode = async (email) => {
 
   if (error) throw new Error('Error al guardar el código de verificación');
 
-  // Enviar email usando la Edge Function
+  // Enviar email llamando a la API de Vercel
   try {
-    const { data, error: invokeError } = await supabase.functions.invoke('send-verification-email', {
-      body: { email, code },
+    const response = await fetch(`${API_URL}/send-verification-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
     });
 
-    if (invokeError) {
-      console.warn('Error al invocar Edge Function:', invokeError);
-      // Fallback: mostrar el código en consola para pruebas
-      console.log(`📧 Código de verificación para ${email}: ${code}`);
-      return code;
-    }
+    const data = await response.json();
 
-    if (!data?.success) {
-      console.warn('El envío del email falló, pero el código fue guardado.');
-      console.log(`📧 Código de verificación para ${email}: ${code}`);
+    if (!response.ok || !data.success) {
+      console.warn('Error enviando email:', data?.error || 'Unknown error');
+      // No lanzamos error para que el código quede guardado igualmente
     }
-
-    return code;
   } catch (err) {
     console.warn('No se pudo enviar el email, pero el código fue guardado.');
+    // Mostrar el código en consola para pruebas
     console.log(`📧 Código de verificación para ${email}: ${code}`);
-    return code;
   }
+
+  return code;
 };
 
-/**
- * Verifica que el código sea válido, no expirado y no usado.
- * Marca el código como usado si es válido.
- */
 export const verifyCode = async (email, code) => {
-  // Buscar código válido
   const { data, error } = await supabase
     .from('email_verification_codes')
     .select('id, expires_at')
@@ -59,11 +53,9 @@ export const verifyCode = async (email, code) => {
   if (error) throw new Error('Error al verificar el código');
   if (!data) return false;
 
-  // Verificar expiración
   const now = new Date();
   if (new Date(data.expires_at) < now) return false;
 
-  // Marcar como usado
   await supabase
     .from('email_verification_codes')
     .update({ used: true })
