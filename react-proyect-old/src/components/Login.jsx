@@ -1,53 +1,51 @@
-
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase, verifyPassword } from '../lib/supabase.js'
-import { Sun, Moon, Globe, Mail, Lock, LogIn, Loader2 } from 'lucide-react'
-import { useTheme } from '../contexts/ThemeContext'
-import { useLanguage } from '../contexts/LanguageContext'
-import './Auth.css'
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase, verifyPassword } from '../lib/supabase.js';
+import { Sun, Moon, Globe, Mail, Lock, LogIn, Loader2 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import './Auth.css';
 
 const Login = ({ onLogin }) => {
-  const { t } = useLanguage()
-  const { theme, toggleTheme } = useTheme()
-  const { language, setLanguage } = useLanguage()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const { t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage } = useLanguage();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
     try {
       const { data, error: dbError } = await supabase
         .from('usuarios')
         .select('*')
         .eq('email', email)
-        .single()
+        .single();
 
       if (dbError || !data) {
-        throw new Error(t('credentialsIncorrect'))
+        throw new Error(t('credentialsIncorrect'));
       }
 
-      const passwordMatch = await verifyPassword(password, data.access_token_plaid)
+      const passwordMatch = await verifyPassword(password, data.access_token_plaid);
       if (!passwordMatch) {
-        throw new Error(t('credentialsIncorrect'))
+        throw new Error(t('credentialsIncorrect'));
       }
 
-      onLogin(data)
+      onLogin(data);
     } catch (err) {
-      setError(err.message || t('error'))
+      setError(err.message || t('error'));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
-      {/* Background Image */}
       <div className="auth-background">
         <img
           src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80"
@@ -57,7 +55,6 @@ const Login = ({ onLogin }) => {
         <div className="auth-background-overlay"></div>
       </div>
 
-      {/* Header Controls */}
       <div className="auth-header-controls">
         <button
           className="auth-toggle-button"
@@ -66,7 +63,6 @@ const Login = ({ onLogin }) => {
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
-
         <button
           className="auth-toggle-button"
           onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
@@ -79,7 +75,6 @@ const Login = ({ onLogin }) => {
         </button>
       </div>
 
-      {/* Login Card */}
       <div className="auth-card login-card">
         <div className="auth-header">
           <div className="auth-logo-container">
@@ -88,9 +83,7 @@ const Login = ({ onLogin }) => {
               alt="Universidad Logo"
               className="university-logo"
             />
-            <h1 className="auth-logo">
-              FinanciaUNT
-            </h1>
+            <h1 className="auth-logo">FinanciaUNT</h1>
           </div>
           <h2 className="auth-title">{t('login')}</h2>
         </div>
@@ -157,7 +150,7 @@ const Login = ({ onLogin }) => {
         </p>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase, hashPassword } from '../lib/supabase';
-import { Sun, Moon, Globe, User, Mail, Lock, Check, Loader2, CreditCard } from 'lucide-react';
+import { supabase, hashPassword } from '../lib/supabase.js';
+import { Sun, Moon, Globe, User, Mail, Lock, Check, Loader2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { requestVerificationCode, verifyCode } from '../lib/emailUtils.js';
@@ -32,6 +32,7 @@ const Register = () => {
     expiry: '',
     cvv: '',
   });
+  const [isSendingCode, setIsSendingCode] = useState(false);
 
   const plans = [
     {
@@ -146,13 +147,16 @@ const Register = () => {
 
     // Plan pago: solicitar verificación de email
     try {
+      setIsSendingCode(true);
       await requestVerificationCode(formData.email);
       setPendingPlan(formData.plan);
       setShowVerificationModal(true);
       setLoading(false);
+      setIsSendingCode(false);
     } catch (err) {
       setError(err.message || t('errorSendingCode'));
       setLoading(false);
+      setIsSendingCode(false);
     }
   };
 
@@ -416,10 +420,10 @@ const Register = () => {
             </div>
           </div>
 
-          <button type="submit" className="primary-button auth-button" disabled={loading}>
-            {loading ? (
+          <button type="submit" className="primary-button auth-button" disabled={loading || isSendingCode}>
+            {loading || isSendingCode ? (
               <>
-                <Loader2 size={18} className="spinner" /> {t('creating')}
+                <Loader2 size={18} className="spinner" /> {isSendingCode ? t('sendingCode') : t('creating')}
               </>
             ) : (
               t('createAccount')

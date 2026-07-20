@@ -8,10 +8,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Cliente estándar (sin usar service_role) para el frontend
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Helper functions para manejo de contraseñas
 export const hashPassword = async (password) => {
   const saltRounds = 10;
   return await bcrypt.hash(password, saltRounds);
