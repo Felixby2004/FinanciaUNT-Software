@@ -86,7 +86,6 @@ const Goals = ({ userId, user: propUser }) => {
             }
           }
           setUserCurrency(currency);
-          console.log('[Goals] Moneda obtenida:', currency);
         }
       } catch (err) {
         console.error('Error inesperado:', err);

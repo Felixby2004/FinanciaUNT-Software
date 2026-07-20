@@ -175,7 +175,6 @@ const CurrencyRates = ({
       if (planProp) {
         const normalizedPlan = planProp.toLowerCase().trim();
         if (['premium', 'enterprise', 'basic'].includes(normalizedPlan)) {
-          console.log('[CurrencyRates] ✅ Usando plan desde prop:', normalizedPlan);
           setPlan(normalizedPlan);
           setLoadingPlan(false);
           return;
@@ -190,7 +189,6 @@ const CurrencyRates = ({
       }
 
       try {
-        console.log('[CurrencyRates] 🔍 Consultando plan para userId:', userId);
         const { data, error } = await supabase
           .from('usuarios')
           .select('plan_suscripcion')
@@ -207,13 +205,10 @@ const CurrencyRates = ({
         const userPlan = data?.plan_suscripcion?.toLowerCase().trim();
 
         if (userPlan === 'premium') {
-          console.log('[CurrencyRates] ✅ Plan detectado: Premium');
           setPlan('premium');
         } else if (userPlan === 'enterprise') {
-          console.log('[CurrencyRates] ✅ Plan detectado: Enterprise');
           setPlan('enterprise');
         } else if (userPlan === 'basic') {
-          console.log('[CurrencyRates] ✅ Plan detectado: Basic');
           setPlan('basic');
         } else {
           console.warn(`[CurrencyRates] ⚠️ Plan desconocido: "${userPlan}", usando basic.`);

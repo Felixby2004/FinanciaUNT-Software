@@ -17,8 +17,9 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    plan: 'basico',
+    plan: 'basic',
   });
+  const [paymentErrors, setPaymentErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -36,7 +37,7 @@ const Register = () => {
 
   const plans = [
     {
-      id: 'basico',
+      id: 'basic',
       name: t('basic'),
       price: 0,
       features: [
@@ -89,6 +90,48 @@ const Register = () => {
     },
   ];
 
+  // Funciones de manejo con validación en vivo
+  const handlePaymentChange = (field, value) => {
+    let formatted = value;
+    let error = '';
+
+    switch (field) {
+      case 'cardNumber':
+        formatted = formatCardNumber(value);
+        const cardValidation = validateCardNumber(formatted);
+        if (!cardValidation.valid) error = cardValidation.message;
+        break;
+      case 'expiry':
+        formatted = formatExpiry(value);
+        const expiryValidation = validateExpiry(formatted);
+        if (!expiryValidation.valid) error = expiryValidation.message;
+        break;
+      case 'cvv':
+        formatted = value.replace(/\D/g, '');
+        const cvvValidation = validateCVV(formatted);
+        if (!cvvValidation.valid) error = cvvValidation.message;
+        break;
+      case 'cardholderName':
+        formatted = value;
+        const nameValidation = validateCardholderName(formatted);
+        if (!nameValidation.valid) error = nameValidation.message;
+        break;
+      default:
+        formatted = value;
+    }
+
+    setPaymentDetails(prev => ({ ...prev, [field]: formatted }));
+    setPaymentErrors(prev => ({ ...prev, [field]: error }));
+  };
+
+  // Validar todo antes de confirmar pago
+  const isPaymentValid = () => {
+    const result = validatePaymentForm(paymentDetails);
+    setPaymentErrors(result.errors);
+    return result.valid;
+  };
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -99,7 +142,7 @@ const Register = () => {
   };
 
   // ===== REGISTRAR USUARIO (con o sin datos de pago) =====
-  const registerUser = async (plan, payment = null) => {
+  const registerUser = async (plan, payment = null, isVerified = false) => {
     const hashedPassword = await hashPassword(formData.password);
     const userData = {
       nombre: formData.nombre,
@@ -108,7 +151,7 @@ const Register = () => {
       plan_suscripcion: plan,
       rol: 'cliente',
       configuracion: {},
-      is_verified: plan === 'basico', // básico ya verificado
+      is_verified: isVerified, // ← ahora se recibe como parámetro
     };
 
     if (payment) {
@@ -134,9 +177,9 @@ const Register = () => {
     }
 
     // Si el plan es básico, registrar directamente
-    if (formData.plan === 'basico') {
+    if (formData.plan === 'basic') {
       try {
-        await registerUser('basico');
+        await registerUser('basic');
         navigate('/login');
       } catch (err) {
         setError(err.message || t('errorCreating'));
@@ -180,9 +223,13 @@ const Register = () => {
 
   // ===== CONFIRMAR PAGO =====
   const handlePaymentConfirm = async () => {
+    if (!isPaymentValid()) {
+      setError('Por favor, corrige los errores en el formulario de pago.');
+      return;
+    }
     setLoading(true);
     try {
-      await registerUser(pendingPlan, paymentDetails);
+      await registerUser(pendingPlan, paymentDetails, true)
       navigate('/login');
     } catch (err) {
       setError(err.message || t('errorCreating'));
@@ -511,54 +558,82 @@ const Register = () => {
             <input
               type="text"
               value={paymentDetails.cardholderName}
-              onChange={(e) => setPaymentDetails({ ...paymentDetails, cardholderName: e.target.value })}
+              onChange={(e) => handlePaymentChange('cardholderName', e.target.value)}
               placeholder={t('cardholderName')}
               style={inputStyle}
             />
+            {paymentErrors.cardholderName && (
+              <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
+                {paymentErrors.cardholderName}
+              </p>
+            )}
+
             <input
               type="text"
               value={paymentDetails.cardNumber}
-              onChange={(e) => setPaymentDetails({ ...paymentDetails, cardNumber: e.target.value })}
+              onChange={(e) => handlePaymentChange('cardNumber', e.target.value)}
               placeholder={t('cardNumber')}
               style={inputStyle}
               maxLength={19}
             />
+            {paymentErrors.cardNumber && (
+              <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
+                {paymentErrors.cardNumber}
+              </p>
+            )}
+
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <input
-                type="text"
-                value={paymentDetails.expiry}
-                onChange={(e) => setPaymentDetails({ ...paymentDetails, expiry: e.target.value })}
-                placeholder={t('expiry')}
-                style={{ ...inputStyle, flex: 1 }}
-                maxLength={5}
-              />
-              <input
-                type="text"
-                value={paymentDetails.cvv}
-                onChange={(e) => setPaymentDetails({ ...paymentDetails, cvv: e.target.value })}
-                placeholder={t('cvv')}
-                style={{ ...inputStyle, flex: 1 }}
-                maxLength={4}
-              />
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={paymentDetails.expiry}
+                  onChange={(e) => handlePaymentChange('expiry', e.target.value)}
+                  placeholder={t('expiry')}
+                  style={inputStyle}
+                  maxLength={5}
+                />
+                {paymentErrors.expiry && (
+                  <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
+                    {paymentErrors.expiry}
+                  </p>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={paymentDetails.cvv}
+                  onChange={(e) => handlePaymentChange('cvv', e.target.value)}
+                  placeholder={t('cvv')}
+                  style={inputStyle}
+                  maxLength={4}
+                />
+                {paymentErrors.cvv && (
+                  <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
+                    {paymentErrors.cvv}
+                  </p>
+                )}
+              </div>
             </div>
 
             <button
               style={{
-                backgroundColor: '#667eea',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                width: '100%',
-                marginTop: '1rem',
-              }}
-              onClick={handlePaymentConfirm}
-              disabled={loading}
-            >
-              {loading ? t('processing') : t('confirmPayment')}
-            </button>
+              backgroundColor: '#667eea',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: Object.values(paymentErrors).some(e => e) ? 'not-allowed' : 'pointer',
+              width: '100%',
+              marginTop: '1rem',
+              opacity: Object.values(paymentErrors).some(e => e) ? 0.5 : 1,
+            }}
+            onClick={handlePaymentConfirm}
+            disabled={loading || Object.values(paymentErrors).some(e => e)}
+          >
+            {loading ? t('processing') : t('confirmPayment')}
+          </button>
+
             <button
               style={{
                 marginTop: '0.5rem',

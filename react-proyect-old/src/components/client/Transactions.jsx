@@ -100,7 +100,6 @@ const Transactions = ({ userId, user: propUser }) => {
             }
           }
           setUserCurrency(currency);
-          console.log('[Transactions] Moneda obtenida:', currency);
         }
       } catch (err) {
         console.error('Error inesperado:', err);

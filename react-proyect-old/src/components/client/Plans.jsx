@@ -1,10 +1,10 @@
-// src/pages/Plans.jsx (versión con verificación y pago integrados)
 import { useState } from 'react';
 import { Check, X, CreditCard } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { supabase } from '../../lib/supabase';
-import { requestVerificationCode, verifyCode } from '../../lib/emailUtils';
+import { supabase } from '../../lib/supabase.js';
+import { requestVerificationCode, verifyCode } from '../../lib/emailUtils.js';
+import './Plans.css';
 
 const Plans = ({ user, onUserUpdate, onLogout }) => {
   const { t } = useLanguage();
@@ -27,6 +27,13 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
   const [verificationError, setVerificationError] = useState('');
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [downgradeTarget, setDowngradeTarget] = useState(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [paymentErrors, setPaymentErrors] = useState({
+    cardholderName: '',
+    cardNumber: '',
+    expiry: '',
+    cvv: '',
+  });
 
   const plans = [
     {
@@ -86,6 +93,93 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     },
   ];
 
+  // ===== VALIDACIONES DE TARJETA =====
+  const validateCardNumber = (value) => {
+    const clean = value.replace(/\s/g, '');
+    if (!/^\d*$/.test(clean)) return 'Solo números';
+    if (clean.length > 16) return 'Máximo 16 dígitos';
+    return '';
+  };
+
+  const validateExpiry = (value) => {
+    const clean = value.replace('/', '');
+    if (!/^\d*$/.test(clean)) return 'Solo números';
+    if (clean.length > 4) return 'Formato MM/AA';
+    if (clean.length === 4) {
+      const month = parseInt(clean.substring(0, 2));
+      const year = parseInt(clean.substring(2, 4));
+      const currentYear = new Date().getFullYear() % 100;
+      const currentMonth = new Date().getMonth() + 1;
+      if (month < 1 || month > 12) return 'Mes inválido (1-12)';
+      if (year < currentYear || (year === currentYear && month < currentMonth)) {
+        return 'Tarjeta expirada';
+      }
+    }
+    return '';
+  };
+
+  const validateCVV = (value) => {
+    if (!/^\d*$/.test(value)) return 'Solo números';
+    if (value.length > 4) return 'Máximo 4 dígitos';
+    if (value.length < 3) return 'Mínimo 3 dígitos';
+    return '';
+  };
+
+  const formatCardNumber = (value) => {
+    const clean = value.replace(/\s/g, '');
+    const groups = clean.match(/.{1,4}/g);
+    return groups ? groups.join(' ') : clean;
+  };
+
+  const formatExpiry = (value) => {
+    const clean = value.replace(/\D/g, '');
+    if (clean.length >= 2) {
+      return clean.substring(0, 2) + '/' + clean.substring(2, 4);
+    }
+    return clean;
+  };
+
+  const handlePaymentChange = (field, value) => {
+    let formatted = value;
+    let error = '';
+
+    switch (field) {
+      case 'cardNumber':
+        formatted = formatCardNumber(value);
+        error = validateCardNumber(value);
+        break;
+      case 'expiry':
+        formatted = formatExpiry(value);
+        error = validateExpiry(value);
+        break;
+      case 'cvv':
+        formatted = value.replace(/\D/g, '');
+        error = validateCVV(formatted);
+        break;
+      case 'cardholderName':
+        formatted = value;
+        error = value.trim().length < 3 ? 'Nombre completo requerido' : '';
+        break;
+      default:
+        formatted = value;
+    }
+
+    setPaymentDetails(prev => ({ ...prev, [field]: formatted }));
+    setPaymentErrors(prev => ({ ...prev, [field]: error }));
+  };
+
+  const isPaymentValid = () => {
+    return (
+      paymentDetails.cardholderName.trim().length >= 3 &&
+      !paymentErrors.cardNumber &&
+      !paymentErrors.expiry &&
+      !paymentErrors.cvv &&
+      paymentDetails.cardNumber.replace(/\s/g, '').length === 16 &&
+      paymentDetails.expiry.replace('/', '').length === 4 &&
+      paymentDetails.cvv.length >= 3
+    );
+  };
+
   // ===== DETERMINAR SI ES DOWNGRADE =====
   const isDowngrade = (targetPlanId) => {
     const currentPlan = user.plan_suscripcion;
@@ -134,28 +228,40 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
   const handleChangePlan = async (planId) => {
     if (planId === user.plan_suscripcion) return;
 
+    // Si es downgrade, mostrar modal de advertencia
     if (isDowngrade(planId)) {
       setDowngradeTarget(planId);
       setShowDowngradeModal(true);
       return;
     }
 
+    // Si es upgrade a premium/enterprise, requiere verificación y pago
     if (planId !== 'basic') {
+      // Verificar si el usuario ya está verificado
       if (!user.is_verified) {
         setPendingPlan(planId);
-        // Generar código antes de mostrar el modal
         try {
+          setIsSendingCode(true);
           await requestVerificationCode(user.email);
           setShowVerificationModal(true);
+          setIsSendingCode(false);
         } catch (err) {
           setMessage(err.message || 'Error al enviar el código');
           setMessageType('error');
+          setIsSendingCode(false);
         }
         return;
       }
+      // Si ya está verificado, ir directamente al pago
       setPendingPlan(planId);
       setShowPaymentModal(true);
       return;
+    }
+
+    // Si es cambiar a básico (downgrade ya cubierto arriba)
+    if (planId === 'basic' && user.plan_suscripcion !== 'basic') {
+      setDowngradeTarget(planId);
+      setShowDowngradeModal(true);
     }
   };
 
@@ -196,6 +302,8 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
 
   // ===== CONFIRMAR PAGO =====
   const handlePayment = async () => {
+    if (!isPaymentValid()) return;
+
     setLoading(pendingPlan);
     setMessage('');
     setMessageType('');
@@ -207,9 +315,9 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         .update({
           plan_suscripcion: pendingPlan,
           cardholder_name: paymentDetails.cardholderName,
-          card_number_preview: '****' + paymentDetails.cardNumber.slice(-4),
+          card_number_preview: '****' + paymentDetails.cardNumber.replace(/\s/g, '').slice(-4),
           card_expiry: paymentDetails.expiry,
-          is_verified: true, // aseguramos que esté verificado
+          is_verified: true,
         })
         .eq('id', user.id);
 
@@ -227,7 +335,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     }
   };
 
-  // ===== ESTILOS (igual que antes) =====
+  // ===== ESTILOS =====
   const pageStyle = {
     padding: '1.5rem',
     backgroundColor: isDark ? '#1a1a2e' : '#f8fafc',
@@ -281,6 +389,8 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     maxWidth: '500px',
     width: '90%',
     boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)',
+    maxHeight: '90vh',
+    overflowY: 'auto',
   };
 
   const inputStyle = {
@@ -289,10 +399,23 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     border: isDark ? '1px solid #2a3a5e' : '1px solid #e5e7eb',
     borderRadius: '8px',
     fontSize: '1rem',
-    marginBottom: '1rem',
+    marginBottom: '0.25rem',
     backgroundColor: isDark ? '#1a1a2e' : '#ffffff',
     color: isDark ? '#e0e0e0' : '#1e293b',
     outline: 'none',
+    transition: 'border-color 0.2s',
+  };
+
+  const inputErrorStyle = {
+    ...inputStyle,
+    borderColor: '#ef4444',
+  };
+
+  const errorTextStyle = {
+    color: '#ef4444',
+    fontSize: '0.8rem',
+    marginBottom: '0.75rem',
+    display: 'block',
   };
 
   // ===== RENDER =====
@@ -374,7 +497,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
               <button
                 style={buttonStyle(isCurrentPlan)}
                 onClick={() => handleChangePlan(plan.id)}
-                disabled={loading === plan.id || isCurrentPlan}
+                disabled={loading === plan.id || isCurrentPlan || isSendingCode}
               >
                 {loading === plan.id
                   ? t('loading')
@@ -387,7 +510,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         })}
       </div>
 
-      {/* Modal de Downgrade (sin cambios) */}
+      {/* ===== MODAL DE DOWNGRADE ===== */}
       {showDowngradeModal && (
         <div
           style={modalOverlayStyle}
@@ -430,7 +553,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         </div>
       )}
 
-      {/* Modal de Verificación de Email */}
+      {/* ===== MODAL DE VERIFICACIÓN DE EMAIL ===== */}
       {showVerificationModal && (
         <div style={modalOverlayStyle} onClick={() => setShowVerificationModal(false)}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -461,6 +584,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
                 fontWeight: 600,
                 cursor: 'pointer',
                 width: '100%',
+                marginTop: '0.5rem',
               }}
               onClick={handleVerifyCode}
             >
@@ -489,7 +613,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         </div>
       )}
 
-      {/* Modal de Pago */}
+      {/* ===== MODAL DE PAGO CON VALIDACIONES ===== */}
       {showPaymentModal && (
         <div style={modalOverlayStyle} onClick={() => setShowPaymentModal(false)}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -500,57 +624,82 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
               {t('enterPaymentDetails')}
             </p>
 
+            {/* Titular de la tarjeta */}
             <input
               type="text"
               value={paymentDetails.cardholderName}
-              onChange={(e) => setPaymentDetails({ ...paymentDetails, cardholderName: e.target.value })}
+              onChange={(e) => handlePaymentChange('cardholderName', e.target.value)}
               placeholder={t('cardholderName')}
-              style={inputStyle}
+              style={paymentErrors.cardholderName ? inputErrorStyle : inputStyle}
+              maxLength={50}
             />
+            {paymentErrors.cardholderName && (
+              <span style={errorTextStyle}>{paymentErrors.cardholderName}</span>
+            )}
+
+            {/* Número de tarjeta */}
             <input
               type="text"
               value={paymentDetails.cardNumber}
-              onChange={(e) => setPaymentDetails({ ...paymentDetails, cardNumber: e.target.value })}
+              onChange={(e) => handlePaymentChange('cardNumber', e.target.value)}
               placeholder={t('cardNumber')}
-              style={inputStyle}
+              style={paymentErrors.cardNumber ? inputErrorStyle : inputStyle}
               maxLength={19}
             />
+            {paymentErrors.cardNumber && (
+              <span style={errorTextStyle}>{paymentErrors.cardNumber}</span>
+            )}
+
+            {/* Expiración y CVV */}
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <input
-                type="text"
-                value={paymentDetails.expiry}
-                onChange={(e) => setPaymentDetails({ ...paymentDetails, expiry: e.target.value })}
-                placeholder={t('expiry')}
-                style={{ ...inputStyle, flex: 1 }}
-                maxLength={5}
-              />
-              <input
-                type="text"
-                value={paymentDetails.cvv}
-                onChange={(e) => setPaymentDetails({ ...paymentDetails, cvv: e.target.value })}
-                placeholder={t('cvv')}
-                style={{ ...inputStyle, flex: 1 }}
-                maxLength={4}
-              />
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={paymentDetails.expiry}
+                  onChange={(e) => handlePaymentChange('expiry', e.target.value)}
+                  placeholder={t('expiry')}
+                  style={paymentErrors.expiry ? inputErrorStyle : inputStyle}
+                  maxLength={5}
+                />
+                {paymentErrors.expiry && (
+                  <span style={errorTextStyle}>{paymentErrors.expiry}</span>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={paymentDetails.cvv}
+                  onChange={(e) => handlePaymentChange('cvv', e.target.value)}
+                  placeholder={t('cvv')}
+                  style={paymentErrors.cvv ? inputErrorStyle : inputStyle}
+                  maxLength={4}
+                />
+                {paymentErrors.cvv && (
+                  <span style={errorTextStyle}>{paymentErrors.cvv}</span>
+                )}
+              </div>
             </div>
 
+            {/* Botón de confirmar pago */}
             <button
               style={{
-                backgroundColor: '#667eea',
+                backgroundColor: isPaymentValid() ? '#667eea' : '#94a3b8',
                 color: 'white',
                 border: 'none',
                 padding: '0.75rem 1.5rem',
                 borderRadius: '8px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: isPaymentValid() ? 'pointer' : 'not-allowed',
                 width: '100%',
                 marginTop: '1rem',
+                opacity: isPaymentValid() ? 1 : 0.6,
               }}
               onClick={handlePayment}
-              disabled={loading}
+              disabled={!isPaymentValid() || loading}
             >
               {loading ? t('processing') : t('confirmPayment')}
             </button>
+
             <button
               style={{
                 marginTop: '0.5rem',
@@ -564,6 +713,18 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
               onClick={() => {
                 setShowPaymentModal(false);
                 setPendingPlan(null);
+                setPaymentDetails({
+                  cardholderName: '',
+                  cardNumber: '',
+                  expiry: '',
+                  cvv: '',
+                });
+                setPaymentErrors({
+                  cardholderName: '',
+                  cardNumber: '',
+                  expiry: '',
+                  cvv: '',
+                });
               }}
             >
               {t('cancel')}

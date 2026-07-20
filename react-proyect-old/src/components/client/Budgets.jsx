@@ -93,7 +93,6 @@ const Budgets = ({ userId, user: propUser }) => {
             }
           }
           setUserCurrency(currency);
-          console.log('[Budgets] Moneda obtenida:', currency);
         }
       } catch (err) {
         console.error('Error inesperado:', err);
