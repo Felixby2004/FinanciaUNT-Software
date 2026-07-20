@@ -170,7 +170,7 @@ const Dashboard = ({ userId, user }) => {
     try {
       const appliedRecommendations = recommendations?.topRecommendations?.filter(rec => rec.isAccepted) || [];
       generatePDFReport({
-        userName: user?.name || 'Usuario',
+        userName: user?.nombre || 'Usuario',
         transactions: recentTransactions,
         budgets: budgets,
         goals: goals,

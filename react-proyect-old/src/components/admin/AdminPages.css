@@ -644,3 +644,203 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+
+/* Asegurar que las variables del tema se apliquen */
+.admin-page {
+  background-color: var(--bg-primary, #f8fafc);
+  color: var(--text-primary, #1e293b);
+  min-height: 100vh;
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.page-title {
+  font-size: 2rem;
+  color: var(--text-primary, #1e293b);
+  margin: 0;
+}
+
+.table-container {
+  overflow-x: auto;
+  background: var(--bg-secondary, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-soft, 0 4px 12px rgba(0,0,0,0.05));
+  backdrop-filter: blur(20px);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+.data-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  border-bottom: 2px solid var(--border-color, #e5e7eb);
+}
+
+.data-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-secondary, #475569);
+}
+
+.data-table tbody tr:hover {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+/* Badges con colores adaptados al tema */
+.plan-badge,
+.role-badge {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.plan-basico {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted, #94a3b8);
+}
+
+.plan-premium {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--accent-blue, #38bdf8);
+}
+
+.plan-enterprise {
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--accent-green, #22c55e);
+}
+
+.role-cliente {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted, #94a3b8);
+}
+
+.role-admin {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--accent-red, #ef4444);
+}
+
+.delete-button {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  padding: 8px 12px;
+  border-radius: var(--radius-md, 8px);
+  color: var(--accent-red, #ef4444);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.delete-button:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  font-size: 1.2rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* ===== ESTILOS ESPECÍFICOS PARA LA PÁGINA DE USUARIOS ===== */
+.users-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.users-data-table thead {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+.users-data-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  border-bottom: 2px solid var(--border-color, #e5e7eb);
+}
+
+.users-data-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-secondary, #475569);
+}
+
+.users-data-table tbody tr:hover {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+/* Badges */
+.users-plan-badge,
+.users-role-badge {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.users-plan-badge.plan-basic {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted, #94a3b8);
+}
+
+.users-plan-badge.plan-premium {
+  background: rgba(56, 189, 248, 0.2);
+  color: var(--accent-blue, #38bdf8);
+}
+
+.users-plan-badge.plan-enterprise {
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--accent-green, #22c55e);
+}
+
+.users-role-badge.role-cliente {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted, #94a3b8);
+}
+
+.users-role-badge.role-admin {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--accent-red, #ef4444);
+}
+
+.users-delete-button {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--accent-red, #ef4444);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.users-delete-button:hover {
+  background: rgba(248, 113, 113, 0.2);
+  transform: scale(1.05);
+}

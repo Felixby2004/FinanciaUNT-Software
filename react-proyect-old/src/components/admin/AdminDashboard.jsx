@@ -24,7 +24,6 @@ const AdminDashboard = ({ user: initialUser, onLogout }) => {
           <Route path="/" element={<Statistics />} />
           <Route path="/ai-stats" element={<AiStats user={user} />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/statistical-tests" element={<StatisticalTests />} />
           <Route path="/profile" element={<Profile user={user} onUserUpdate={handleUserUpdate} />} />
         </Routes>
       </div>

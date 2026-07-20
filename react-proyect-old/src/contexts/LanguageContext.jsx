@@ -260,6 +260,67 @@ const translations = {
     modelCollaborativeDesc: 'Compara tu perfil de gasto con usuarios similares para encontrar oportunidades de mejora.',
     modelOptimizerDesc: 'Analiza tendencias y volatilidad para optimizar tu ahorro a futuro.',
 
+    // ADMIN:
+    "aiModelsInfoTitle": "Modelos de IA y Pruebas Estadísticas",
+    "aiModelsIntroTitle": "¿Qué son los modelos de IA en FinanciaUNT?",
+    "aiModelsIntroText": "FinanciaUNT utiliza tres modelos de inteligencia artificial para generar recomendaciones financieras personalizadas. Cada modelo analiza tus datos desde una perspectiva diferente, permitiendo obtener sugerencias más completas y precisas.",
+    "aiModelsIntroText2": "Además, se aplican pruebas estadísticas para evaluar la calidad y confiabilidad de cada modelo, asegurando que las recomendaciones sean realmente útiles para los usuarios.",
+
+    "aiModelsTitle": "Modelos de Recomendación",
+    "modelRulesLabel": "Reglas",
+    "modelRulesName": "Modelo de Reglas",
+    "modelRulesDescription": "Este modelo aplica reglas predefinidas basadas en los presupuestos del usuario y su tasa de ahorro. Identifica gastos excesivos y sugiere ajustes automáticos.",
+    "modelRulesWhen": "Ideal para usuarios que necesitan control básico de sus gastos y presupuestos.",
+
+    "modelCollabLabel": "Colaborativo",
+    "modelCollabName": "Modelo Colaborativo",
+    "modelCollabDescription": "Compara el perfil de gasto del usuario con usuarios similares para encontrar oportunidades de mejora. Es útil para descubrir patrones de ahorro que otros ya aplican.",
+    "modelCollabWhen": "Recomendado para usuarios que quieren aprender de las mejores prácticas de otros.",
+
+    "modelSavingsLabel": "Optimizador",
+    "modelSavingsName": "Modelo Optimizador de Ahorro",
+    "modelSavingsDescription": "Analiza tendencias y volatilidad en los gastos para optimizar el ahorro futuro. Es el modelo más avanzado y sugiere estrategias a largo plazo.",
+    "modelSavingsWhen": "Perfecto para usuarios con objetivos de ahorro a largo plazo o inversiones.",
+
+    "whenToUse": "Cuándo usarlo",
+
+    "statisticalTestsTitle": "Pruebas Estadísticas Utilizadas",
+    "statisticalTestsIntro": "Para garantizar la calidad de las recomendaciones, aplicamos dos pruebas estadísticas que evalúan el rendimiento de los modelos de IA:",
+
+    "testFriedmanName": "1. Prueba de Friedman",
+    "friedmanDescription": "Esta prueba no paramétrica compara el rendimiento global de los tres modelos simultáneamente. Responde a la pregunta: '¿Existen diferencias estadísticamente significativas entre el rendimiento de los modelos?'",
+    "friedmanResult": "Resultado",
+    "friedmanResultText": "Si el p-valor es menor a 0.05 (5% de significancia), concluimos que al menos un modelo es diferente a los demás. Si es mayor, no hay evidencia suficiente para afirmar diferencias.",
+    "whenToUseFriedman": "Cuándo se usa",
+    "whenToUseFriedmanText": "Siempre que se quiera evaluar si los modelos tienen un desempeño similar o hay uno que destaca sobre los demás.",
+
+    "testWilcoxonName": "2. Prueba de Wilcoxon (post-hoc)",
+    "wilcoxonDescription": "Mientras la prueba de Friedman evalúa si hay diferencias globales, la prueba de Wilcoxon se aplica para identificar qué pares de modelos son diferentes entre sí. Es un análisis post-hoc o de seguimiento.",
+    "wilcoxonResult": "Resultado",
+    "wilcoxonResultText": "Se compara cada par de modelos (Reglas vs Colaborativo, Reglas vs Optimizador, Colaborativo vs Optimizador) para determinar si sus diferencias son significativas.",
+    "whenToUseWilcoxon": "Cuándo se usa",
+    "whenToUseWilcoxonText": "Cuando la prueba de Friedman indica que existen diferencias, este test ayuda a identificar exactamente qué modelo es superior.",
+
+    "effectSizeTitle": "3. Tamaño del Efecto (Cohen's d)",
+    "effectSizeDescription": "Además del p-valor, calculamos el 'tamaño del efecto' (Cohen's d) para entender la magnitud de las diferencias entre modelos. Esto complementa la significancia estadística con la relevancia práctica.",
+    "effectSizeInterpretation": "Interpretación",
+    "effectSizeInterpretationText": "Valores de d ≈ 0.2 indican un efecto pequeño, d ≈ 0.5 es moderado y d ≈ 0.8 es grande. Esto ayuda a decidir si una diferencia, aunque significativa, es realmente importante para el usuario.",
+
+    "performanceMetricsTitle": "Métricas de Rendimiento",
+    "performanceMetricsIntro": "Para evaluar la calidad de las recomendaciones generadas por cada modelo, utilizamos tres métricas clave:",
+    "metricPrecisionName": "Precisión@5",
+    "metricPrecisionDescription": "Mide el porcentaje de recomendaciones útiles entre las primeras 5 sugeridas por el modelo. Una mayor precisión indica que el modelo acierta más en sus primeras recomendaciones.",
+    "metricNdcgName": "NDCG@10",
+    "metricNdcgDescription": "Evalúa la calidad del ranking de las 10 primeras recomendaciones, considerando el orden de relevancia. Un valor cercano a 1 significa un ranking perfecto.",
+    "metricUpliftName": "Savings Uplift",
+    "metricUpliftDescription": "Incremento promedio en el ahorro que generan las recomendaciones del modelo. Se expresa en moneda local (PEN, USD, etc.) y refleja el impacto financiero real.",
+
+    "comparatorTitle": "Comparador de Modelos",
+    "comparatorDescription": "El sistema también incluye un 'Comparador' que combina las recomendaciones de los 3 modelos, ponderadas según su peso y relevancia. Esto permite ofrecer al usuario las recomendaciones más equilibradas y efectivas.",
+    "howItWorks": "Cómo funciona",
+    "howItWorksText": "Cada recomendación recibe una puntuación basada en su urgencia y el peso del modelo que la generó. Luego se ordenan por esa puntuación y se presentan al usuario en orden de prioridad.",
+    "comparatorNote": "Nota: El Comparador está disponible para todos los planes, pero el número de recomendaciones visibles depende del plan del usuario (3 para Básico, 10 para Premium y Enterprise).",
+
     // ===== CURRENCY RATES =====
     exchangeRates: 'Tipos de Cambio',
     currencies: 'divisas',
@@ -273,6 +334,8 @@ const translations = {
     noData: 'Sin datos',
     vsYesterday: 'vs ayer',
     upgradeForMoreCurrencies: 'Actualiza a Premium o Enterprise para ver más divisas.',
+    registrationDate: 'Fecha de Registro',
+    userManagement: 'Gestión de usuarios',
 
     // ===== VERIFICATION & PAYMENT =====
     verifyEmail: 'Verificar correo electrónico',
@@ -526,6 +589,8 @@ const translations = {
     chatProcessing: 'Thank you for your message! I am processing your request.',
     chatError: 'I could not respond at this time. Please try again.',
     thinking: 'Thinking...',
+    registrationDate: 'Registration Date',
+    userManagement: 'User Management',
 
     // ===== VOICE INPUT =====
     voiceInput: 'Voice input',
@@ -604,6 +669,67 @@ const translations = {
     modelRulesDesc: 'Applies predefined rules based on your budgets and savings rate.',
     modelCollaborativeDesc: 'Compares your spending profile with similar users to find improvement opportunities.',
     modelOptimizerDesc: 'Analyzes trends and volatility to optimize your future savings.',
+
+    // ADMIN:
+    "aiModelsInfoTitle": "AI Models and Statistical Tests",
+    "aiModelsIntroTitle": "What are AI models in FinanciaUNT?",
+    "aiModelsIntroText": "FinanciaUNT uses three artificial intelligence models to generate personalized financial recommendations. Each model analyzes your data from a different perspective, providing more comprehensive and accurate suggestions.",
+    "aiModelsIntroText2": "Additionally, statistical tests are applied to evaluate the quality and reliability of each model, ensuring that the recommendations are truly useful for users.",
+
+    "aiModelsTitle": "Recommendation Models",
+    "modelRulesLabel": "Rules",
+    "modelRulesName": "Rules Model",
+    "modelRulesDescription": "This model applies predefined rules based on the user's budgets and savings rate. It identifies excessive spending and suggests automatic adjustments.",
+    "modelRulesWhen": "Ideal for users who need basic control over their spending and budgets.",
+
+    "modelCollabLabel": "Collaborative",
+    "modelCollabName": "Collaborative Model",
+    "modelCollabDescription": "Compares the user's spending profile with similar users to find improvement opportunities. It's useful for discovering saving patterns that others are already applying.",
+    "modelCollabWhen": "Recommended for users who want to learn from other users' best practices.",
+
+    "modelSavingsLabel": "Optimizer",
+    "modelSavingsName": "Savings Optimizer Model",
+    "modelSavingsDescription": "Analyzes trends and volatility in spending to optimize future savings. It is the most advanced model and suggests long-term strategies.",
+    "modelSavingsWhen": "Perfect for users with long-term savings goals or investments.",
+
+    "whenToUse": "When to use",
+
+    "statisticalTestsTitle": "Statistical Tests Used",
+    "statisticalTestsIntro": "To ensure the quality of recommendations, we apply two statistical tests that evaluate the performance of the AI models:",
+
+    "testFriedmanName": "1. Friedman Test",
+    "friedmanDescription": "This non-parametric test compares the overall performance of the three models simultaneously. It answers: 'Are there statistically significant differences between the models' performance?'",
+    "friedmanResult": "Result",
+    "friedmanResultText": "If the p-value is less than 0.05 (5% significance), we conclude that at least one model differs from the others. If it is higher, there is not enough evidence to claim differences.",
+    "whenToUseFriedman": "When to use",
+    "whenToUseFriedmanText": "Whenever you want to evaluate whether the models have similar performance or if one stands out from the others.",
+
+    "testWilcoxonName": "2. Wilcoxon Test (post-hoc)",
+    "wilcoxonDescription": "While the Friedman test evaluates whether there are global differences, the Wilcoxon test is applied to identify which pairs of models are different from each other. It is a post-hoc or follow-up analysis.",
+    "wilcoxonResult": "Result",
+    "wilcoxonResultText": "Each pair of models is compared (Rules vs Collaborative, Rules vs Optimizer, Collaborative vs Optimizer) to determine if their differences are significant.",
+    "whenToUseWilcoxon": "When to use",
+    "whenToUseWilcoxonText": "When the Friedman test indicates that differences exist, this test helps identify exactly which model is superior.",
+
+    "effectSizeTitle": "3. Effect Size (Cohen's d)",
+    "effectSizeDescription": "In addition to the p-value, we calculate the 'effect size' (Cohen's d) to understand the magnitude of differences between models. This complements statistical significance with practical relevance.",
+    "effectSizeInterpretation": "Interpretation",
+    "effectSizeInterpretationText": "Values of d ≈ 0.2 indicate a small effect, d ≈ 0.5 is moderate, and d ≈ 0.8 is large. This helps decide whether a difference, although significant, is truly important for the user.",
+
+    "performanceMetricsTitle": "Performance Metrics",
+    "performanceMetricsIntro": "To evaluate the quality of recommendations generated by each model, we use three key metrics:",
+    "metricPrecisionName": "Precision@5",
+    "metricPrecisionDescription": "Measures the percentage of useful recommendations among the first 5 suggested by the model. Higher precision indicates the model is more accurate in its first recommendations.",
+    "metricNdcgName": "NDCG@10",
+    "metricNdcgDescription": "Evaluates the ranking quality of the first 10 recommendations, considering the order of relevance. A value close to 1 means a perfect ranking.",
+    "metricUpliftName": "Savings Uplift",
+    "metricUpliftDescription": "Average increase in savings generated by the model's recommendations. It is expressed in local currency (PEN, USD, etc.) and reflects the real financial impact.",
+
+    "comparatorTitle": "Model Comparator",
+    "comparatorDescription": "The system also includes a 'Comparator' that combines recommendations from all 3 models, weighted according to their relevance and importance. This allows offering the user the most balanced and effective recommendations.",
+    "howItWorks": "How it works",
+    "howItWorksText": "Each recommendation receives a score based on its urgency and the weight of the model that generated it. They are then sorted by that score and presented to the user in order of priority.",
+    "comparatorNote": "Note: The Comparator is available for all plans, but the number of visible recommendations depends on the user's plan (3 for Basic, 10 for Premium and Enterprise).",
 
     // ===== CURRENCY RATES =====
     exchangeRates: 'Exchange Rates',

@@ -77,7 +77,7 @@ const Navbar = ({ user, onLogout }) => {
         transactions: txRes.data || [],
         budgets: budRes.data || [],
         goals: goalRes.data || [],
-        userName: user?.name || 'Usuario',
+        userName: user?.nombre || 'Usuario',
         userPreferences: { language, plan },
       };
     } catch (error) {

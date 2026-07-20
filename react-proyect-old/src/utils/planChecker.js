@@ -6,7 +6,7 @@ export function getUserPlan(user) {
   if (user.rol === 'admin') return PLANS.ADMIN;
   
   // Por defecto si no hay plan asignado, es básico
-  const planName = user.plan_name || user.plan?.name || PLANS.BASIC;
+  const planName = user.plan_suscripcion || user.plan || PLANS.BASIC;
   return planName.toLowerCase();
 }
 

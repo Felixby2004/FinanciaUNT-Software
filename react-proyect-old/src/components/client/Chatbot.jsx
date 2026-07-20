@@ -191,7 +191,7 @@ const Chatbot = ({ user }) => {
           .eq('usuario_id', user.id);
 
         generatePDFReport({
-          userName: user?.name || 'Usuario',
+          userName: user?.nombre || 'Usuario',
           transactions: transactions || [],
           budgets: budgets || [],
           goals: goals || [],
