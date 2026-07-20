@@ -275,6 +275,8 @@ const translations = {
     upgradeForMoreCurrencies: 'Actualiza a Premium o Enterprise para ver más divisas.',
 
     // ===== VERIFICATION & PAYMENT =====
+    verifyEmail: 'Verificar correo electrónico',
+    enterCodeSentTo: 'Código enviado a ',
     emailVerificationRequired: 'Verificación de correo electrónico requerida',
     verifyYourEmail: 'Verifica tu correo electrónico',
     weSentCode: 'Hemos enviado un código de verificación a tu correo electrónico.',
@@ -618,6 +620,8 @@ const translations = {
     upgradeForMoreCurrencies: 'Upgrade to Premium or Enterprise to see more currencies.',
 
     // ===== VERIFICATION & PAYMENT =====
+    verifyEmail: 'Verify email',
+    enterCodeSentTo: 'Code sent to ',
     emailVerificationRequired: 'Email verification required',
     verifyYourEmail: 'Verify your email',
     weSentCode: 'We have sent a verification code to your email.',
