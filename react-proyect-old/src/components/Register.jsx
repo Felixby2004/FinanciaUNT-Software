@@ -17,9 +17,8 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    plan: 'basic',
+    plan: 'basico',
   });
-  const [paymentErrors, setPaymentErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -27,7 +26,14 @@ const Register = () => {
   const [verificationError, setVerificationError] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPlan, setPendingPlan] = useState(null);
+  // Estado para simular el pago (solo validación, no se guarda)
   const [paymentDetails, setPaymentDetails] = useState({
+    cardholderName: '',
+    cardNumber: '',
+    expiry: '',
+    cvv: '',
+  });
+  const [paymentErrors, setPaymentErrors] = useState({
     cardholderName: '',
     cardNumber: '',
     expiry: '',
@@ -37,7 +43,7 @@ const Register = () => {
 
   const plans = [
     {
-      id: 'basic',
+      id: 'basico',
       name: t('basic'),
       price: 0,
       features: [
@@ -90,7 +96,52 @@ const Register = () => {
     },
   ];
 
-  // Funciones de manejo con validación en vivo
+  // ===== VALIDACIONES DE TARJETA (solo para simulación) =====
+  const validateCardNumber = (value) => {
+    const clean = value.replace(/\s/g, '');
+    if (!/^\d*$/.test(clean)) return 'Solo números';
+    if (clean.length > 16) return 'Máximo 16 dígitos';
+    return '';
+  };
+
+  const validateExpiry = (value) => {
+    const clean = value.replace('/', '');
+    if (!/^\d*$/.test(clean)) return 'Solo números';
+    if (clean.length > 4) return 'Formato MM/AA';
+    if (clean.length === 4) {
+      const month = parseInt(clean.substring(0, 2));
+      const year = parseInt(clean.substring(2, 4));
+      const currentYear = new Date().getFullYear() % 100;
+      const currentMonth = new Date().getMonth() + 1;
+      if (month < 1 || month > 12) return 'Mes inválido (1-12)';
+      if (year < currentYear || (year === currentYear && month < currentMonth)) {
+        return 'Tarjeta expirada';
+      }
+    }
+    return '';
+  };
+
+  const validateCVV = (value) => {
+    if (!/^\d*$/.test(value)) return 'Solo números';
+    if (value.length > 4) return 'Máximo 4 dígitos';
+    if (value.length < 3) return 'Mínimo 3 dígitos';
+    return '';
+  };
+
+  const formatCardNumber = (value) => {
+    const clean = value.replace(/\s/g, '');
+    const groups = clean.match(/.{1,4}/g);
+    return groups ? groups.join(' ') : clean;
+  };
+
+  const formatExpiry = (value) => {
+    const clean = value.replace(/\D/g, '');
+    if (clean.length >= 2) {
+      return clean.substring(0, 2) + '/' + clean.substring(2, 4);
+    }
+    return clean;
+  };
+
   const handlePaymentChange = (field, value) => {
     let formatted = value;
     let error = '';
@@ -98,23 +149,19 @@ const Register = () => {
     switch (field) {
       case 'cardNumber':
         formatted = formatCardNumber(value);
-        const cardValidation = validateCardNumber(formatted);
-        if (!cardValidation.valid) error = cardValidation.message;
+        error = validateCardNumber(value);
         break;
       case 'expiry':
         formatted = formatExpiry(value);
-        const expiryValidation = validateExpiry(formatted);
-        if (!expiryValidation.valid) error = expiryValidation.message;
+        error = validateExpiry(value);
         break;
       case 'cvv':
         formatted = value.replace(/\D/g, '');
-        const cvvValidation = validateCVV(formatted);
-        if (!cvvValidation.valid) error = cvvValidation.message;
+        error = validateCVV(formatted);
         break;
       case 'cardholderName':
         formatted = value;
-        const nameValidation = validateCardholderName(formatted);
-        if (!nameValidation.valid) error = nameValidation.message;
+        error = value.trim().length < 3 ? 'Nombre completo requerido' : '';
         break;
       default:
         formatted = value;
@@ -124,25 +171,20 @@ const Register = () => {
     setPaymentErrors(prev => ({ ...prev, [field]: error }));
   };
 
-  // Validar todo antes de confirmar pago
   const isPaymentValid = () => {
-    const result = validatePaymentForm(paymentDetails);
-    setPaymentErrors(result.errors);
-    return result.valid;
+    return (
+      paymentDetails.cardholderName.trim().length >= 3 &&
+      !paymentErrors.cardNumber &&
+      !paymentErrors.expiry &&
+      !paymentErrors.cvv &&
+      paymentDetails.cardNumber.replace(/\s/g, '').length === 16 &&
+      paymentDetails.expiry.replace('/', '').length === 4 &&
+      paymentDetails.cvv.length >= 3
+    );
   };
 
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handlePlanSelect = (planId) => {
-    setFormData((prev) => ({ ...prev, plan: planId }));
-  };
-
-  // ===== REGISTRAR USUARIO (con o sin datos de pago) =====
-  const registerUser = async (plan, payment = null, isVerified = false) => {
+  // ===== REGISTRAR USUARIO (sin guardar datos bancarios) =====
+  const registerUser = async (plan, isVerified = false) => {
     const hashedPassword = await hashPassword(formData.password);
     const userData = {
       nombre: formData.nombre,
@@ -151,18 +193,16 @@ const Register = () => {
       plan_suscripcion: plan,
       rol: 'cliente',
       configuracion: {},
-      is_verified: isVerified, // ← ahora se recibe como parámetro
+      is_verified: isVerified,
     };
-
-    if (payment) {
-      userData.cardholder_name = payment.cardholderName;
-      userData.card_number_preview = '****' + payment.cardNumber.slice(-4);
-      userData.card_expiry = payment.expiry;
-    }
 
     const { error: dbError } = await supabase.from('usuarios').insert(userData);
     if (dbError) throw dbError;
   };
+
+  // ===== ACTUALIZAR PLAN Y VERIFICAR (para usuarios que ya existen) =====
+  // Esta función se usa en Plans, no en Register, pero la dejamos por si acaso.
+  // En Register no se actualiza, se inserta directamente.
 
   // ===== ENVÍO DEL FORMULARIO =====
   const handleSubmit = async (e) => {
@@ -177,9 +217,9 @@ const Register = () => {
     }
 
     // Si el plan es básico, registrar directamente
-    if (formData.plan === 'basic') {
+    if (formData.plan === 'basico') {
       try {
-        await registerUser('basic');
+        await registerUser('basico', false);
         navigate('/login');
       } catch (err) {
         setError(err.message || t('errorCreating'));
@@ -221,15 +261,19 @@ const Register = () => {
     }
   };
 
-  // ===== CONFIRMAR PAGO =====
+  // ===== CONFIRMAR PAGO (SOLO REGISTRA USUARIO CON PLAN Y VERIFICADO) =====
   const handlePaymentConfirm = async () => {
     if (!isPaymentValid()) {
-      setError('Por favor, corrige los errores en el formulario de pago.');
+      setError('Por favor, completa todos los campos de pago correctamente.');
       return;
     }
+
     setLoading(true);
+    setError('');
+
     try {
-      await registerUser(pendingPlan, paymentDetails, true)
+      // Registrar usuario con el plan seleccionado y verificado
+      await registerUser(pendingPlan, true);
       navigate('/login');
     } catch (err) {
       setError(err.message || t('errorCreating'));
@@ -261,6 +305,8 @@ const Register = () => {
     maxWidth: '500px',
     width: '90%',
     boxShadow: theme === 'dark' ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)',
+    maxHeight: '90vh',
+    overflowY: 'auto',
   };
 
   const inputStyle = {
@@ -269,10 +315,23 @@ const Register = () => {
     border: theme === 'dark' ? '1px solid #2a3a5e' : '1px solid #e5e7eb',
     borderRadius: '8px',
     fontSize: '1rem',
-    marginBottom: '1rem',
+    marginBottom: '0.25rem',
     backgroundColor: theme === 'dark' ? '#1a1a2e' : '#ffffff',
     color: theme === 'dark' ? '#e0e0e0' : '#1e293b',
     outline: 'none',
+    transition: 'border-color 0.2s',
+  };
+
+  const inputErrorStyle = {
+    ...inputStyle,
+    borderColor: '#ef4444',
+  };
+
+  const errorTextStyle = {
+    color: '#ef4444',
+    fontSize: '0.8rem',
+    marginBottom: '0.75rem',
+    display: 'block',
   };
 
   // ===== RENDER =====
@@ -470,7 +529,7 @@ const Register = () => {
           <button type="submit" className="primary-button auth-button" disabled={loading || isSendingCode}>
             {loading || isSendingCode ? (
               <>
-                <Loader2 size={18} className="spinner" /> {isSendingCode ? t('sendingCode') : t('creating')}
+                <Loader2 size={18} className="spinner" /> {isSendingCode ? 'Enviando código...' : t('creating')}
               </>
             ) : (
               t('createAccount')
@@ -486,7 +545,7 @@ const Register = () => {
         </p>
       </div>
 
-      {/* === MODAL DE VERIFICACIÓN === */}
+      {/* ===== MODAL DE VERIFICACIÓN ===== */}
       {showVerificationModal && (
         <div style={modalOverlayStyle} onClick={() => setShowVerificationModal(false)}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -517,6 +576,7 @@ const Register = () => {
                 fontWeight: 600,
                 cursor: 'pointer',
                 width: '100%',
+                marginTop: '0.5rem',
               }}
               onClick={handleVerifyCode}
             >
@@ -536,6 +596,7 @@ const Register = () => {
                 setShowVerificationModal(false);
                 setVerificationCode('');
                 setVerificationError('');
+                setPendingPlan(null);
               }}
             >
               {t('cancel')}
@@ -544,7 +605,7 @@ const Register = () => {
         </div>
       )}
 
-      {/* === MODAL DE PAGO === */}
+      {/* ===== MODAL DE PAGO (SOLO SIMULACIÓN) ===== */}
       {showPaymentModal && (
         <div style={modalOverlayStyle} onClick={() => setShowPaymentModal(false)}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -555,33 +616,33 @@ const Register = () => {
               {t('enterPaymentDetails')}
             </p>
 
+            {/* Titular de la tarjeta */}
             <input
               type="text"
               value={paymentDetails.cardholderName}
               onChange={(e) => handlePaymentChange('cardholderName', e.target.value)}
               placeholder={t('cardholderName')}
-              style={inputStyle}
+              style={paymentErrors.cardholderName ? inputErrorStyle : inputStyle}
+              maxLength={50}
             />
             {paymentErrors.cardholderName && (
-              <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
-                {paymentErrors.cardholderName}
-              </p>
+              <span style={errorTextStyle}>{paymentErrors.cardholderName}</span>
             )}
 
+            {/* Número de tarjeta */}
             <input
               type="text"
               value={paymentDetails.cardNumber}
               onChange={(e) => handlePaymentChange('cardNumber', e.target.value)}
               placeholder={t('cardNumber')}
-              style={inputStyle}
+              style={paymentErrors.cardNumber ? inputErrorStyle : inputStyle}
               maxLength={19}
             />
             {paymentErrors.cardNumber && (
-              <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
-                {paymentErrors.cardNumber}
-              </p>
+              <span style={errorTextStyle}>{paymentErrors.cardNumber}</span>
             )}
 
+            {/* Expiración y CVV */}
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <input
@@ -589,13 +650,11 @@ const Register = () => {
                   value={paymentDetails.expiry}
                   onChange={(e) => handlePaymentChange('expiry', e.target.value)}
                   placeholder={t('expiry')}
-                  style={inputStyle}
+                  style={paymentErrors.expiry ? inputErrorStyle : inputStyle}
                   maxLength={5}
                 />
                 {paymentErrors.expiry && (
-                  <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
-                    {paymentErrors.expiry}
-                  </p>
+                  <span style={errorTextStyle}>{paymentErrors.expiry}</span>
                 )}
               </div>
               <div style={{ flex: 1 }}>
@@ -604,35 +663,34 @@ const Register = () => {
                   value={paymentDetails.cvv}
                   onChange={(e) => handlePaymentChange('cvv', e.target.value)}
                   placeholder={t('cvv')}
-                  style={inputStyle}
+                  style={paymentErrors.cvv ? inputErrorStyle : inputStyle}
                   maxLength={4}
                 />
                 {paymentErrors.cvv && (
-                  <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '-0.5rem', marginBottom: '0.5rem' }}>
-                    {paymentErrors.cvv}
-                  </p>
+                  <span style={errorTextStyle}>{paymentErrors.cvv}</span>
                 )}
               </div>
             </div>
 
+            {/* Botón de confirmar pago */}
             <button
               style={{
-              backgroundColor: '#667eea',
-              color: 'white',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              fontWeight: 600,
-              cursor: Object.values(paymentErrors).some(e => e) ? 'not-allowed' : 'pointer',
-              width: '100%',
-              marginTop: '1rem',
-              opacity: Object.values(paymentErrors).some(e => e) ? 0.5 : 1,
-            }}
-            onClick={handlePaymentConfirm}
-            disabled={loading || Object.values(paymentErrors).some(e => e)}
-          >
-            {loading ? t('processing') : t('confirmPayment')}
-          </button>
+                backgroundColor: isPaymentValid() ? '#667eea' : '#94a3b8',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontWeight: 600,
+                cursor: isPaymentValid() ? 'pointer' : 'not-allowed',
+                width: '100%',
+                marginTop: '1rem',
+                opacity: isPaymentValid() ? 1 : 0.6,
+              }}
+              onClick={handlePaymentConfirm}
+              disabled={!isPaymentValid() || loading}
+            >
+              {loading ? t('processing') : t('confirmPayment')}
+            </button>
 
             <button
               style={{
@@ -647,6 +705,18 @@ const Register = () => {
               onClick={() => {
                 setShowPaymentModal(false);
                 setPendingPlan(null);
+                setPaymentDetails({
+                  cardholderName: '',
+                  cardNumber: '',
+                  expiry: '',
+                  cvv: '',
+                });
+                setPaymentErrors({
+                  cardholderName: '',
+                  cardNumber: '',
+                  expiry: '',
+                  cvv: '',
+                });
               }}
             >
               {t('cancel')}

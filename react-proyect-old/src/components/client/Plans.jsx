@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, X, CreditCard } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase.js';
@@ -92,7 +92,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     },
   ];
 
-  // ===== VALIDACIONES DE TARJETA =====
+  // ===== VALIDACIONES DE TARJETA (solo para simulación) =====
   const validateCardNumber = (value) => {
     const clean = value.replace(/\s/g, '');
     if (!/^\d*$/.test(clean)) return 'Solo números';
@@ -188,38 +188,34 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     return targetIndex < currentIndex;
   };
 
-  // ===== FUNCIÓN PARA REALIZAR LOGOUT DESPUÉS DE CAMBIO =====
-  const performLogout = () => {
-    if (onLogout) {
-      onLogout();
-    } else {
-      localStorage.removeItem('financiaunt_user');
-      localStorage.removeItem('financiaunt_session');
-      window.location.href = '/login';
-    }
-  };
-
-  // ===== ACTUALIZAR PLAN Y LUEGO HACER LOGOUT =====
-  const updatePlanAndLogout = async (newPlanId) => {
+  // ===== ACTUALIZAR PLAN (sin logout) =====
+  const updatePlanOnly = async (newPlanId) => {
     try {
       const { error } = await supabase
         .from('usuarios')
-        .update({ plan_suscripcion: newPlanId })
+        .update({ 
+          plan_suscripcion: newPlanId,
+          is_verified: true 
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
-      setMessage(`✅ ${t('planChangedTo')} ${plans.find((p) => p.id === newPlanId).name}. ${t('redirecting')}`);
-      setMessageType('success');
+      // Actualizar estado local
+      const updatedUser = { ...user, plan_suscripcion: newPlanId, is_verified: true };
+      if (onUserUpdate) onUserUpdate(updatedUser);
+      localStorage.setItem('financiaunt_user', JSON.stringify(updatedUser));
 
-      setTimeout(() => {
-        performLogout();
-      }, 1500);
+      setMessage(`✅ ${t('planChangedTo')} ${plans.find((p) => p.id === newPlanId).name}`);
+      setMessageType('success');
+      setLoading(null);
+      return true;
     } catch (err) {
       console.error('Error al cambiar plan:', err);
       setMessage(err.message || t('error'));
       setMessageType('error');
       setLoading(null);
+      return false;
     }
   };
 
@@ -227,16 +223,13 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
   const handleChangePlan = async (planId) => {
     if (planId === user.plan_suscripcion) return;
 
-    // Si es downgrade, mostrar modal de advertencia
     if (isDowngrade(planId)) {
       setDowngradeTarget(planId);
       setShowDowngradeModal(true);
       return;
     }
 
-    // Si es upgrade a premium/enterprise, requiere verificación y pago
     if (planId !== 'basic') {
-      // Verificar si el usuario ya está verificado
       if (!user.is_verified) {
         setPendingPlan(planId);
         try {
@@ -251,13 +244,12 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         }
         return;
       }
-      // Si ya está verificado, ir directamente al pago
       setPendingPlan(planId);
       setShowPaymentModal(true);
       return;
     }
 
-    // Si es cambiar a básico (downgrade ya cubierto arriba)
+    // Si es cambiar a básico (downgrade ya cubierto)
     if (planId === 'basic' && user.plan_suscripcion !== 'basic') {
       setDowngradeTarget(planId);
       setShowDowngradeModal(true);
@@ -267,13 +259,11 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
   // ===== CONFIRMAR DOWNGRADE =====
   const confirmDowngrade = async () => {
     if (!downgradeTarget) return;
-
     setLoading(downgradeTarget);
     setMessage('');
     setMessageType('');
     setShowDowngradeModal(false);
-
-    await updatePlanAndLogout(downgradeTarget);
+    await updatePlanOnly(downgradeTarget);
   };
 
   // ===== VERIFICAR CÓDIGO =====
@@ -285,21 +275,18 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         setVerificationError(t('invalidCode'));
         return;
       }
-      // Código correcto: marcar como verificado y abrir pago
       setShowVerificationModal(false);
       setVerificationCode('');
-      // Actualizar usuario en estado local
       const updatedUser = { ...user, is_verified: true };
-      onUserUpdate(updatedUser);
+      if (onUserUpdate) onUserUpdate(updatedUser);
       localStorage.setItem('financiaunt_user', JSON.stringify(updatedUser));
-      // Abrir modal de pago
       setShowPaymentModal(true);
     } catch (err) {
       setVerificationError(err.message || t('errorVerifying'));
     }
   };
 
-  // ===== CONFIRMAR PAGO =====
+  // ===== CONFIRMAR PAGO (SOLO ACTUALIZA PLAN) =====
   const handlePayment = async () => {
     if (!isPaymentValid()) return;
 
@@ -307,30 +294,12 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
     setMessage('');
     setMessageType('');
 
-    try {
-      // Actualizar plan y datos de pago en Supabase
-      const { error } = await supabase
-        .from('usuarios')
-        .update({
-          plan_suscripcion: pendingPlan,
-          cardholder_name: paymentDetails.cardholderName,
-          card_number_preview: '****' + paymentDetails.cardNumber.replace(/\s/g, '').slice(-4),
-          card_expiry: paymentDetails.expiry,
-          is_verified: true,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
+    const success = await updatePlanOnly(pendingPlan);
+    if (success) {
       setShowPaymentModal(false);
       setPendingPlan(null);
-
-      // Logout después del upgrade
-      await updatePlanAndLogout(pendingPlan);
-    } catch (err) {
-      setMessage(err.message || t('error'));
-      setMessageType('error');
-      setLoading(null);
+      // Opcional: recargar página o redirigir
+      // window.location.reload();
     }
   };
 
@@ -430,20 +399,12 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
             marginBottom: '1.5rem',
             backgroundColor:
               messageType === 'success'
-                ? isDark
-                  ? '#166534'
-                  : '#dcfce7'
-                : isDark
-                ? '#7f1d1d'
-                : '#fee2e2',
+                ? isDark ? '#166534' : '#dcfce7'
+                : isDark ? '#7f1d1d' : '#fee2e2',
             color:
               messageType === 'success'
-                ? isDark
-                  ? '#86efac'
-                  : '#166534'
-                : isDark
-                ? '#fca5a5'
-                : '#7f1d1d',
+                ? isDark ? '#86efac' : '#166534'
+                : isDark ? '#fca5a5' : '#7f1d1d',
           }}
         >
           {message}
@@ -612,7 +573,7 @@ const Plans = ({ user, onUserUpdate, onLogout }) => {
         </div>
       )}
 
-      {/* ===== MODAL DE PAGO CON VALIDACIONES ===== */}
+      {/* ===== MODAL DE PAGO (SOLO SIMULACIÓN) ===== */}
       {showPaymentModal && (
         <div style={modalOverlayStyle} onClick={() => setShowPaymentModal(false)}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
