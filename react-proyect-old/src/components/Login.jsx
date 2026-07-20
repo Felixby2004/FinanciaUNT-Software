@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase, verifyPassword } from '../lib/supabase'
+import { supabase, verifyPassword } from '../lib/supabase.js'
 import { Sun, Moon, Globe, Mail, Lock, LogIn, Loader2 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useLanguage } from '../contexts/LanguageContext'
