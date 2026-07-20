@@ -1,0 +1,17 @@
+{
+  "builds": [
+    {
+      "src": "react-proyect-old/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "react-proyect-old/dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "react-proyect-old/$1"
+    }
+  ]
+}
