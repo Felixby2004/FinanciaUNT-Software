@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS planes (
 -- Insertar planes iniciales
 INSERT INTO planes (nombre, descripcion, precio)
 VALUES 
-('basico', 'Plan Básico - Gratis', 0),
+('basic', 'Plan Básico - Gratis', 0),
 ('premium', 'Plan Premium - $9.99/mes', 9.99),
 ('enterprise', 'Plan Enterprise - $29.99/mes', 29.99)
 ON CONFLICT (nombre) DO NOTHING;

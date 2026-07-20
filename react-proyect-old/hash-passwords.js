@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 // Script to hash passwords for Supabase
 // Use this to generate hashed passwords for your users
 
-const passwordToHash = 'admin123'; // Change this to your password
+const passwordToHash = '123456'; // Change this to your password
 const saltRounds = 10;
 
 const hashPassword = async (password) => {

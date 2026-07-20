@@ -1,8 +1,5 @@
 
 /* Estilos para las nuevas páginas del cliente */
-.ai-recommendations {
-  padding: 20px;
-}
 
 .client-page {
   display: flex;
@@ -134,10 +131,6 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-.ai-recommendations h2 {
-  margin-bottom: 10px;
 }
 
 .plan-info {

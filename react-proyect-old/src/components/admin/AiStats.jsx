@@ -84,6 +84,22 @@ const AiStats = () => {
     await fetchAnalytics()
   }
 
+  // Funciones de agregación definidas fuera del useMemo
+  const comparisonAggregate = (groupedRecommendations) => {
+    const flattened = MODEL_ORDER.flatMap((modelType) => groupedRecommendations[modelType] || [])
+    return flattened.map((recommendation) => ({
+      modelType: recommendation.modelType,
+      score: recommendation.score || recommendation.urgency || 0,
+      utilityScore: Math.max(0, Math.min(10, Math.round(((recommendation.score || recommendation.urgency) / 2.5) * 10))),
+      isUseful: (recommendation.score || recommendation.urgency) >= 0.55
+    }))
+  }
+
+  const comparisonSummary = (recommendations) => ({
+    total: recommendations.length,
+    usefulRate: recommendations.length ? recommendations.filter((entry) => entry.isUseful).length / recommendations.length : 0
+  })
+
   const analytics = useMemo(() => {
     const users = payload.users || []
     const transactions = payload.transactions || []
@@ -189,7 +205,7 @@ const AiStats = () => {
       return {
         pair: `${AI_MODEL_LABELS[leftModel]} vs ${AI_MODEL_LABELS[rightModel]}`,
         pValue: wilcoxon.pValue,
-        statistic: wilcoxon.W,
+        statistic: wilcoxon.w || wilcoxon.W || 0,
         effect,
         significant: wilcoxon.pValue < 0.05
       }
@@ -243,6 +259,10 @@ const AiStats = () => {
       ...pairwise.map((entry) => `${entry.pair}: ${entry.significant ? 'diferencia significativa' : 'sin diferencia significativa'} (p = ${entry.pValue.toFixed(4)}, d = ${entry.effect.toFixed(2)}).`)
     ].join(' ')
 
+    // Agregar recommendationSummary
+    const aggregated = comparisonAggregate(allRecommendations)
+    const summary = comparisonSummary(aggregated)
+
     return {
       metricCards,
       heatmap,
@@ -251,28 +271,13 @@ const AiStats = () => {
       gainCurve,
       userRows,
       utilityValues,
-      recommendationSummary: comparisonSummary(comparisonAggregate(allRecommendations)),
+      recommendationSummary: summary,
       ndcgMatrix,
       precisionMatrix,
       interpretation,
       monthlySeries: buildMonthlyExpenseSeries(transactions, 12)
     }
   }, [anonymize, payload])
-
-  const comparisonAggregate = (groupedRecommendations) => {
-    const flattened = MODEL_ORDER.flatMap((modelType) => groupedRecommendations[modelType] || [])
-    return flattened.map((recommendation) => ({
-      modelType: recommendation.modelType,
-      score: recommendation.score || recommendation.urgency || 0,
-      utilityScore: Math.max(0, Math.min(10, Math.round(((recommendation.score || recommendation.urgency) / 2.5) * 10))),
-      isUseful: (recommendation.score || recommendation.urgency) >= 0.55
-    }))
-  }
-
-  const comparisonSummary = (recommendations) => ({
-    total: recommendations.length,
-    usefulRate: recommendations.length ? recommendations.filter((entry) => entry.isUseful).length / recommendations.length : 0
-  })
 
   if (loading) {
     return <div className="loading">Cargando estadísticas de IA...</div>

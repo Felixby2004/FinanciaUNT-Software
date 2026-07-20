@@ -1,14 +1,22 @@
-
 import { useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
 
+// Función para hashear un texto usando SHA-256
+const hashText = async (text) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 const EmailVerificationModal = ({ user, onVerified, onClose }) => {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  
+
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -18,28 +26,44 @@ const EmailVerificationModal = ({ user, onVerified, onClose }) => {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
+  // Enviar correo mediante Edge Function de Supabase
+  const sendVerificationEmail = async (email, code) => {
+    const { error } = await supabase.functions.invoke('send-verification-email', {
+      body: { email, code },
+    });
+    if (error) throw new Error(error.message || 'Error al enviar el correo');
+  };
+
   const handleSendCode = async () => {
     setLoading(true);
     setMessage('');
     setMessageType('');
-    
+
     try {
       const verificationCode = generateRandomCode();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
 
+      // Hashear el código antes de guardarlo
+      const hashedCode = await hashText(verificationCode);
+
+      // Guardar el hash en la base de datos
       const { error } = await supabase
         .from('usuarios')
-        .update({ verification_code: verificationCode, verification_code_expires_at: expiresAt })
+        .update({
+          verification_code: hashedCode,
+          verification_code_expires_at: expiresAt.toISOString(),
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
-      // In a real app, you'd send the email using an email service
-      console.log('Verification code:', verificationCode);
-      
-      setMessage(t('weSentCode'));
+      // Enviar el código por correo (sin hash)
+      await sendVerificationEmail(user.email, verificationCode);
+
+      setMessage(t('weSentCode') || 'Código enviado a tu correo');
       setMessageType('success');
     } catch (err) {
+      console.error('Error al enviar código:', err);
       setMessage(err.message || t('error'));
       setMessageType('error');
     } finally {
@@ -53,29 +77,40 @@ const EmailVerificationModal = ({ user, onVerified, onClose }) => {
     setMessageType('');
 
     try {
+      // Obtener el hash almacenado y la expiración
       const { data: userData, error } = await supabase
         .from('usuarios')
-        .select('*')
+        .select('verification_code, verification_code_expires_at')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
 
+      // Verificar expiración
       if (new Date(userData.verification_code_expires_at) < new Date()) {
-        setMessage(t('codeExpired'));
+        setMessage(t('codeExpired') || 'El código ha expirado');
         setMessageType('error');
         return;
       }
 
-      if (userData.verification_code !== code) {
-        setMessage(t('invalidCode'));
+      // Hashear el código ingresado
+      const hashedInput = await hashText(code);
+
+      // Comparar hashes
+      if (userData.verification_code !== hashedInput) {
+        setMessage(t('invalidCode') || 'Código incorrecto');
         setMessageType('error');
         return;
       }
 
+      // Marcar como verificado
       const { error: updateError } = await supabase
         .from('usuarios')
-        .update({ is_verified: true, verification_code: null, verification_code_expires_at: null })
+        .update({
+          is_verified: true,
+          verification_code: null,
+          verification_code_expires_at: null,
+        })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
@@ -89,6 +124,7 @@ const EmailVerificationModal = ({ user, onVerified, onClose }) => {
     }
   };
 
+  // ===== ESTILOS =====
   const modalOverlayStyle = {
     position: 'fixed',
     top: 0,
@@ -136,6 +172,8 @@ const EmailVerificationModal = ({ user, onVerified, onClose }) => {
     transition: 'background-color 0.2s',
     width: '100%',
     marginBottom: '0.5rem',
+    opacity: loading ? 0.6 : 1,
+    pointerEvents: loading ? 'none' : 'auto',
   };
 
   const secondaryButtonStyle = {
@@ -147,33 +185,48 @@ const EmailVerificationModal = ({ user, onVerified, onClose }) => {
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 700 }}>{t('verifyYourEmail')}</h2>
-        <p style={{ marginBottom: '1.5rem', color: isDark ? '#94a3b8' : '#64748b' }}>{t('weSentCode')}</p>
-        
+        <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 700 }}>
+          {t('verifyYourEmail') || 'Verifica tu correo'}
+        </h2>
+        <p style={{ marginBottom: '1.5rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+          {t('weSentCode') || 'Ingresa el código que enviamos a tu correo'}
+        </p>
+
         {message && (
-          <div style={{ 
-            padding: '0.75rem 1rem', 
-            borderRadius: '8px', 
-            marginBottom: '1rem', 
-            backgroundColor: messageType === 'success' ? (isDark ? '#166534' : '#dcfce7') : (isDark ? '#7f1d1d' : '#fee2e2'),
-            color: messageType === 'success' ? (isDark ? '#86efac' : '#166534') : (isDark ? '#fca5a5' : '#7f1d1d')
-          }}>
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              marginBottom: '1rem',
+              backgroundColor:
+                messageType === 'success'
+                  ? isDark ? '#166534' : '#dcfce7'
+                  : isDark ? '#7f1d1d' : '#fee2e2',
+              color:
+                messageType === 'success'
+                  ? isDark ? '#86efac' : '#166534'
+                  : isDark ? '#fca5a5' : '#7f1d1d',
+            }}
+          >
             {message}
           </div>
         )}
-        
-        <input 
-          type="text" 
+
+        <input
+          type="text"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder={t('verificationCode')}
+          placeholder={t('verificationCode') || 'Código de verificación'}
           style={inputStyle}
+          maxLength={6}
         />
+
         <button style={buttonStyle} onClick={handleVerify} disabled={loading}>
-          {loading ? t('loading') : t('verify')}
+          {loading ? t('loading') || 'Cargando...' : t('verify') || 'Verificar'}
         </button>
+
         <button style={secondaryButtonStyle} onClick={handleSendCode} disabled={loading}>
-          {loading ? t('loading') : t('resendCode')}
+          {loading ? t('loading') || 'Cargando...' : t('resendCode') || 'Reenviar código'}
         </button>
       </div>
     </div>

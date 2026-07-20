@@ -12,7 +12,7 @@ const Profile = ({ user, onUserUpdate }) => {
     monthlyIncome: user.configuracion?.monthlyIncome || '',
     riskProfile: user.configuracion?.riskProfile || 'moderado',
     advisorTone: user.configuracion?.advisorTone || 'amable',
-    currency: user.configuracion?.currency || 'USD',
+    currency: user.configuracion?.currency || 'PEN',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -193,6 +193,7 @@ const Profile = ({ user, onUserUpdate }) => {
           <div className="form-group">
             <label className="form-label">{t('currency')}</label>
             <select name="currency" value={formData.currency} onChange={handleChange} className="form-input">
+              <option value="PEN">PEN</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
               <option value="MXN">MXN</option>

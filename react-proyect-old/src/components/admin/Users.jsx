@@ -11,7 +11,7 @@ const Users = () => {
     nombre: '',
     email: '',
     access_token_plaid: '',
-    plan_suscripcion: 'basico',
+    plan_suscripcion: 'basic',
     rol: 'cliente'
   })
 
@@ -50,7 +50,7 @@ const Users = () => {
         nombre: '',
         email: '',
         access_token_plaid: '',
-        plan_suscripcion: 'basico',
+        plan_suscripcion: 'basic',
         rol: 'cliente'
       })
       fetchUsers()
@@ -202,7 +202,7 @@ const Users = () => {
                   value={newUser.plan_suscripcion}
                   onChange={(e) => setNewUser({ ...newUser, plan_suscripcion: e.target.value })}
                 >
-                  <option value="basico">Básico</option>
+                  <option value="basic">Básico</option>
                   <option value="premium">Premium</option>
                   <option value="enterprise">Enterprise</option>
                 </select>

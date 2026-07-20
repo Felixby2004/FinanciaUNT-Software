@@ -1,120 +1,930 @@
+/* ============================================================
+   AIRecommendations.css – Diseño profesional
+   ============================================================ */
+
+:root {
+  --ai-primary: #667eea;
+  --ai-secondary: #764ba2;
+  --ai-success: #22c55e;
+  --ai-danger: #ef4444;
+  --ai-radius: 14px;
+  --ai-radius-sm: 10px;
+  --ai-transition: 0.25s ease;
+}
+
 .ai-recommendations {
-  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--ai-text-primary, #1e293b);
+  transition: color 0.3s, background-color 0.3s;
 }
 
-.tabs-container {
-  display: flex;
-  gap: 0;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  overflow-x: auto;
+/* ===== TEMA OSCURO ===== */
+.ai-recommendations[data-theme="dark"] {
+  --ai-text-primary: #e2e8f0;
+  --ai-text-secondary: #94a3b8;
+  --ai-bg-card: #1e293b;
+  --ai-border-color: #334155;
+  --ai-hover-bg: #2d3a4f;
+  --ai-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  --ai-shadow-hover: 0 8px 32px rgba(0,0,0,0.5);
 }
 
-.tab-btn {
+/* ===== TEMA CLARO ===== */
+.ai-recommendations[data-theme="light"] {
+  --ai-text-primary: #0f172a;
+  --ai-text-secondary: #475569;
+  --ai-bg-card: #ffffff;
+  --ai-border-color: #e2e8f0;
+  --ai-hover-bg: #f1f5f9;
+  --ai-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --ai-shadow-hover: 0 8px 30px rgba(0,0,0,0.10);
+}
+
+/* ===== LOADING & ERROR ===== */
+.ai-recommendations .loading-state,
+.ai-recommendations .error-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--text-secondary, #64748b);
-  transition: all 0.2s;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-}
-
-.tab-btn:hover {
-  background: var(--hover-bg, #f1f5f9);
-}
-
-.tab-btn.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-}
-
-.model-section-card {
-  margin-bottom: 1rem;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.model-header:hover {
-  background: var(--hover-bg, #f1f5f9);
-}
-
-.recommendation-card {
-  transition: all 0.2s ease;
-}
-
-.recommendation-card:hover {
-  transform: translateX(4px);
-}
-
-.recommendation-card.accepted {
-  opacity: 0.7;
-}
-
-.accept-btn {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 0.25rem 0.75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  transition: background 0.2s;
-}
-
-.accept-btn:hover {
-  background: #5a6fd1;
-}
-
-.comparator-section {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color, #e5e7eb);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
   gap: 1rem;
 }
 
-/* Dark theme overrides */
-[data-theme="dark"] .tab-btn:hover {
-  background: #1e2a4a;
-}
-
-[data-theme="dark"] .model-header:hover {
-  background: #1e2a4a;
-}
-
-[data-theme="dark"] .recommendation-card {
-  background: #1e2a4a;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-  font-size: 1.1rem;
-  color: var(--text-secondary, #64748b);
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
+.ai-recommendations .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(102,126,234,0.2);
+  border-top-color: var(--ai-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.ai-recommendations .error-box {
+  padding: 1rem 1.5rem;
+  border-radius: var(--ai-radius-sm);
+  background: #fee2e2;
+  color: #991b1b;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ai-recommendations[data-theme="dark"] .error-box {
+  background: #3b1a1a;
+  color: #fca5a5;
+}
+
+.ai-recommendations .error-box button {
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ===== HERO ===== */
+.ai-recommendations .hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  border-radius: var(--ai-radius);
+  background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.04));
+  border: 1px solid var(--ai-border-color);
+  margin-bottom: 2rem;
+  transition: all var(--ai-transition);
+}
+
+.ai-recommendations[data-theme="dark"] .hero {
+  background: linear-gradient(135deg, rgba(129,140,248,0.08), rgba(167,139,250,0.05));
+}
+
+.ai-recommendations .hero-content {
+  flex: 1;
+}
+
+.ai-recommendations .eyebrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ai-text-secondary);
+  margin: 0 0 0.2rem 0;
+}
+
+.ai-recommendations .hero h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem 0;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .subtitle {
+  font-size: 1rem;
+  color: var(--ai-text-secondary);
+  margin: 0 0 0.5rem 0;
+}
+
+.ai-recommendations .plan-tag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ai-text-secondary);
+}
+
+.ai-recommendations .plan-tag strong {
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .plan-limit {
+  opacity: 0.7;
+}
+
+.ai-recommendations .refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--ai-border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ai-text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--ai-transition);
+  white-space: nowrap;
+}
+
+.ai-recommendations .refresh-btn:hover {
+  background: var(--ai-hover-bg);
+  border-color: var(--ai-primary);
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== STATS ===== */
+.ai-recommendations .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.ai-recommendations .stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--ai-bg-card);
+  border-radius: var(--ai-radius-sm);
+  border: 1px solid var(--ai-border-color);
+  box-shadow: var(--ai-shadow);
+  transition: all var(--ai-transition);
+}
+
+.ai-recommendations .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ai-shadow-hover);
+}
+
+.ai-recommendations .stat-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.ai-recommendations .stat-card > div {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-recommendations .stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ai-text-secondary);
+}
+
+.ai-recommendations .stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ai-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== SECCIONES ===== */
+.ai-recommendations .section {
+  margin-bottom: 2.5rem;
+}
+
+.ai-recommendations .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ai-recommendations .section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .section-header.collapsible {
+  cursor: pointer;
+}
+
+.ai-recommendations .section-header.collapsible:hover h2 {
+  color: var(--ai-primary);
+}
+
+.ai-recommendations .section-desc {
+  font-size: 0.95rem;
+  color: var(--ai-text-secondary);
+  margin: 0 0 1.5rem 0;
+}
+
+/* ===== BADGES ===== */
+.ai-recommendations .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: all var(--ai-transition);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.ai-recommendations .badge-models {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
+.ai-recommendations .badge-comparator {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: #fff;
+}
+
+.ai-recommendations .badge-stats {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: #fff;
+}
+
+.ai-recommendations[data-theme="dark"] .badge-models {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+}
+
+.ai-recommendations[data-theme="dark"] .badge-comparator {
+  background: linear-gradient(135deg, #f472b6, #fb7185);
+}
+
+.ai-recommendations[data-theme="dark"] .badge-stats {
+  background: linear-gradient(135deg, #60a5fa, #22d3ee);
+}
+
+/* ===== MODELOS ===== */
+.ai-recommendations .models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.ai-recommendations .model-card {
+  background: var(--ai-bg-card);
+  border: 1px solid var(--ai-border-color);
+  border-radius: var(--ai-radius);
+  padding: 1.5rem;
+  box-shadow: var(--ai-shadow);
+  transition: all var(--ai-transition);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-recommendations .model-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--ai-shadow-hover);
+}
+
+.ai-recommendations .model-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.ai-recommendations .model-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.ai-recommendations .model-title h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .model-weight {
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: block;
+  margin-top: 0.1rem;
+}
+
+.ai-recommendations .model-desc {
+  font-size: 0.9rem;
+  color: var(--ai-text-secondary);
+  margin: 0 0 1rem 0;
+  flex: 1;
+  line-height: 1.5;
+}
+
+.ai-recommendations .model-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  background: var(--ai-hover-bg);
+  border-radius: var(--ai-radius-sm);
+  padding: 0.75rem;
+  border: 1px solid var(--ai-border-color);
+}
+
+.ai-recommendations .metric-item {
+  text-align: center;
+}
+
+.ai-recommendations .metric-label {
+  display: block;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ai-text-secondary);
+}
+
+.ai-recommendations .metric-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .no-metrics {
+  text-align: center;
+  font-style: italic;
+  color: var(--ai-text-secondary);
+  padding: 0.5rem 0;
+}
+
+/* ===== COMPARATOR ===== */
+.ai-recommendations .recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ai-recommendations .recommendation-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--ai-bg-card);
+  border: 1px solid var(--ai-border-color);
+  border-radius: var(--ai-radius-sm);
+  transition: all var(--ai-transition);
+}
+
+.ai-recommendations .recommendation-card:hover {
+  border-color: var(--ai-primary);
+  transform: translateX(4px);
+  box-shadow: var(--ai-shadow);
+}
+
+.ai-recommendations .recommendation-card.accepted {
+  border-color: var(--ai-success);
+  opacity: 0.85;
+}
+
+.ai-recommendations .rec-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-recommendations .rank-number {
+  font-weight: 700;
+  color: var(--ai-text-primary);
+  min-width: 2rem;
+}
+
+.ai-recommendations .rec-model {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+}
+
+.ai-recommendations .rec-description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ai-text-primary);
+  word-break: break-word;
+}
+
+.ai-recommendations .rec-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ai-recommendations .rec-score,
+.ai-recommendations .rec-impact {
+  font-size: 0.8rem;
+  color: var(--ai-text-secondary);
+}
+
+.ai-recommendations .rec-score strong,
+.ai-recommendations .rec-impact strong {
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .accept-btn {
+  background: var(--ai-primary);
+  color: #fff;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ai-recommendations .accept-btn:hover {
+  background: #5a6fd1;
+}
+
+.ai-recommendations .accepted-badge {
+  color: var(--ai-success);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+/* ===== ESTADÍSTICAS – GRÁFICOS ===== */
+.ai-recommendations .stats-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.ai-recommendations .chart-container {
+  background: var(--ai-bg-card);
+  border: 1px solid var(--ai-border-color);
+  border-radius: var(--ai-radius-sm);
+  padding: 1rem;
+  box-shadow: var(--ai-shadow);
+}
+
+.ai-recommendations .chart-container h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ai-text-primary);
+  text-align: center;
+}
+
+.ai-recommendations .chart-description {
+  font-size: 0.8rem;
+  color: var(--ai-text-secondary);
+  text-align: center;
+  margin: -0.2rem 0 0.8rem 0;
+  font-style: italic;
+}
+
+/* ===== TABLA DE MÉTRICAS ===== */
+.ai-recommendations .stats-table {
+  margin: 1.5rem 0;
+  background: var(--ai-bg-card);
+  border: 1px solid var(--ai-border-color);
+  border-radius: var(--ai-radius-sm);
+  padding: 1.25rem;
+  box-shadow: var(--ai-shadow);
+  overflow-x: auto;
+}
+
+.ai-recommendations .stats-table h4 {
+  margin: 0 0 0.25rem 0;
+  font-weight: 600;
+  color: var(--ai-text-primary);
+  font-size: 1rem;
+}
+
+.ai-recommendations .table-description {
+  font-size: 0.85rem;
+  color: var(--ai-text-secondary);
+  margin: 0 0 0.8rem 0;
+}
+
+.ai-recommendations .stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ai-recommendations .stats-table th {
+  text-align: left;
+  color: var(--ai-text-secondary);
+  font-weight: 500;
+  padding: 0.5rem 0.3rem;
+  border-bottom: 2px solid var(--ai-border-color);
+}
+
+.ai-recommendations .stats-table td {
+  padding: 0.5rem 0.3rem;
+  border-bottom: 1px solid var(--ai-border-color);
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .stats-table .best-row {
+  background-color: rgba(102, 126, 234, 0.05);
+}
+
+.ai-recommendations .stats-table .best-value {
+  font-weight: 700;
+  color: var(--ai-primary);
+}
+
+/* ===== PRUEBAS ESTADÍSTICAS ===== */
+.ai-recommendations .stats-tests-detailed {
+  margin-top: 2rem;
+  padding: 0 0.5rem;
+}
+
+.ai-recommendations .stats-tests-detailed h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .tests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.2rem;
+  margin: 1rem 0 1.5rem 0;
+}
+
+.ai-recommendations .test-card {
+  background: var(--ai-bg-card);
+  border: 1px solid var(--ai-border-color);
+  border-radius: var(--ai-radius-sm);
+  padding: 1.2rem 1rem;
+  text-align: center;
+  box-shadow: var(--ai-shadow);
+  transition: all var(--ai-transition);
+}
+
+.ai-recommendations .test-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ai-shadow-hover);
+}
+
+.ai-recommendations .test-card h5 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--ai-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ai-recommendations .test-card p {
+  margin: 0.2rem 0;
+  font-size: 0.95rem;
+  color: var(--ai-text-secondary);
+}
+
+.ai-recommendations .test-card p strong {
+  font-family: 'Courier New', monospace;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .sig-yes {
+  color: var(--ai-success);
+  font-weight: 700;
+}
+
+.ai-recommendations .sig-no {
+  color: var(--ai-danger);
+  font-weight: 700;
+}
+
+.ai-recommendations .wilcoxon-results {
+  margin-top: 1.5rem;
+  background: var(--ai-bg-card);
+  border: 1px solid var(--ai-border-color);
+  border-radius: var(--ai-radius-sm);
+  padding: 1.2rem;
+  box-shadow: var(--ai-shadow);
+}
+
+.ai-recommendations .wilcoxon-results h5 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.8rem 0;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .pair-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.2rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ai-border-color);
+}
+
+.ai-recommendations .pair-result:last-child {
+  border-bottom: none;
+}
+
+.ai-recommendations .pair-result .pair-name {
+  font-weight: 600;
+  min-width: 180px;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .pair-result .pair-stats {
+  font-family: 'Courier New', monospace;
+  background: var(--ai-hover-bg);
+  padding: 0.05rem 0.6rem;
+  border-radius: 4px;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .pair-result .effect-size {
+  font-size: 0.85rem;
+  color: var(--ai-text-secondary);
+  background: var(--ai-hover-bg);
+  padding: 0.05rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* ===== COMPARACIÓN FINAL ===== */
+.ai-recommendations .final-comparison {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ai-border-color);
+}
+
+.ai-recommendations .final-comparison h4 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 1.2rem 0;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .conclusion-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(102,126,234,0.05), rgba(118,75,162,0.03));
+  border-radius: var(--ai-radius);
+  border: 1px solid rgba(102,126,234,0.2);
+}
+
+.ai-recommendations[data-theme="dark"] .conclusion-card {
+  background: linear-gradient(135deg, rgba(129,140,248,0.08), rgba(167,139,250,0.05));
+  border-color: rgba(129,140,248,0.25);
+}
+
+.ai-recommendations .conclusion-icon {
+  font-size: 2.8rem;
+  flex-shrink: 0;
+}
+
+.ai-recommendations .conclusion-content {
+  flex: 1;
+}
+
+.ai-recommendations .conclusion-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.8rem 0;
+}
+
+.ai-recommendations .conclusion-list li {
+  padding: 0.3rem 0;
+  font-size: 0.95rem;
+  color: var(--ai-text-primary);
+  border-bottom: 1px solid var(--ai-border-color);
+}
+
+.ai-recommendations .conclusion-list li:last-child {
+  border-bottom: none;
+}
+
+.ai-recommendations .model-strengths {
+  margin: 0.8rem 0 0.5rem 0;
+}
+
+.ai-recommendations .model-strengths p {
+  font-weight: 600;
+  margin: 0 0 0.3rem 0;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .model-strengths ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ai-recommendations .model-strengths li {
+  padding: 0.2rem 0;
+  font-size: 0.95rem;
+  color: var(--ai-text-secondary);
+}
+
+.ai-recommendations .model-strengths li strong {
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .conclusion-recommendation {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ai-danger);
+  margin: 1.5rem auto 0; /* centra horizontalmente */
+  padding: 0.5rem 1rem;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 8px;
+  display: block;          /* bloque para que el margen auto funcione */
+  text-align: center;      /* centra el texto interno */
+  max-width: fit-content;  /* opcional: el ancho se ajusta al contenido */
+}
+
+/* ===== EMPTY STATE ===== */
+.ai-recommendations .empty-state {
+  text-align: center;
+  padding: 2rem 1.5rem;
+  color: var(--ai-text-secondary);
+  background: var(--ai-hover-bg);
+  border-radius: var(--ai-radius-sm);
+  border: 1px dashed var(--ai-border-color);
+}
+
+/* ===== UPGRADE CARD ===== */
+.ai-recommendations .upgrade-card {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--ai-radius);
+  background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.04));
+  border: 1px solid rgba(102,126,234,0.2);
+  transition: all var(--ai-transition);
+}
+
+.ai-recommendations[data-theme="dark"] .upgrade-card {
+  background: linear-gradient(135deg, rgba(129,140,248,0.08), rgba(167,139,250,0.05));
+  border-color: rgba(129,140,248,0.25);
+}
+
+.ai-recommendations .upgrade-card:hover {
+  border-color: rgba(102,126,234,0.4);
+  box-shadow: var(--ai-shadow);
+}
+
+.ai-recommendations .upgrade-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ai-recommendations .upgrade-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  animation: pulse-icon 2s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.ai-recommendations .upgrade-texts {
+  flex: 1;
+}
+
+.ai-recommendations .upgrade-texts h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ai-text-primary);
+}
+
+.ai-recommendations .upgrade-texts p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ai-text-secondary);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .ai-recommendations .recommendation-card {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  .ai-recommendations .rec-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .ai-recommendations {
+    padding: 1rem;
+  }
+  .ai-recommendations .hero {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem;
+  }
+  .ai-recommendations .refresh-btn {
+    align-self: flex-start;
+  }
+  .ai-recommendations .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ai-recommendations .models-grid {
+    grid-template-columns: 1fr;
+  }
+  .ai-recommendations .stats-charts {
+    grid-template-columns: 1fr;
+  }
+  .ai-recommendations .upgrade-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ai-recommendations .pair-result {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+  .ai-recommendations .pair-result .pair-name {
+    min-width: auto;
+  }
+  .ai-recommendations .conclusion-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .ai-recommendations .conclusion-list {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-recommendations .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .ai-recommendations .hero h1 {
+    font-size: 1.4rem;
+  }
+  .ai-recommendations .plan-tag {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
 }

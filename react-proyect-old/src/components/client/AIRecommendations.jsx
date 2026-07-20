@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { supabase } from '../../lib/supabase';
 import {
   AI_MODEL_LABELS,
@@ -8,128 +9,45 @@ import {
   buildUserModelRecommendations,
   compareRecommendations,
   getPlanRecommendationLimit,
-  formatCurrency,
   fetchModelWeights,
   saveRecommendationsToDb,
   getModelPerformanceMetrics,
   runStatisticalTests,
 } from '../../lib/aiEngine';
-import { getUserPlan } from '../../utils/planChecker';
-import './ClientPages.css';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
+import './AIRecommendations.css';
 
-// --- Traducciones (ES/EN) ---
-const translations = {
-  es: {
-    title: 'Recomendaciones de IA',
-    subtitle: 'Análisis inteligente de tus finanzas con 3 modelos predictivos',
-    plan: 'Plan',
-    max_recommendations: 'máximo {limit} recomendaciones',
-    refresh: 'Recalcular',
-    refreshing: 'Actualizando...',
-    loading: 'Cargando recomendaciones de IA...',
-    error: 'Error al cargar las recomendaciones',
-    retry: 'Reintentar',
-    dominant_model: 'Modelo dominante',
-    estimated_impact: 'Impacto estimado',
-    visible_recommendations: 'Recomendaciones visibles',
-    models_section: 'Modelos de Recomendación',
-    models_description: 'Cada modelo analiza tus finanzas desde una perspectiva diferente.',
-    comparator_title: 'Comparator – Recomendaciones combinadas',
-    comparator_description: 'Las mejores recomendaciones de los 3 modelos, ponderadas y ordenadas por puntuación.',
-    stats_title: 'Estadísticas comparativas de modelos',
-    stats_description: 'Pruebas estadísticas para evaluar el rendimiento relativo de cada modelo.',
-    metric_precision: 'Precisión@5',
-    metric_ndcg: 'NDCG@10',
-    metric_uplift: 'Uplift de ahorro',
-    test_friedman: 'Prueba de Friedman',
-    test_wilcoxon: 'Prueba de Wilcoxon',
-    p_value: 'p-valor',
-    effect_size: 'Tamaño del efecto',
-    significant: 'Significativo',
-    not_significant: 'No significativo',
-    model_rules: 'Reglas',
-    model_collab: 'Colaborativo',
-    model_savings: 'Optimizador',
-    score: 'Puntuación',
-    impact: 'Impacto',
-    accept: 'Aceptar',
-    accepted: 'Aceptada',
-    general: 'General',
-    no_recommendations: 'No hay suficientes datos para generar recomendaciones.',
-    no_stats: 'No hay suficientes datos para ejecutar pruebas estadísticas.',
-    model_rules_desc: 'Aplica reglas predefinidas basadas en tus presupuestos y tasa de ahorro.',
-    model_collab_desc: 'Compara tu perfil de gasto con usuarios similares para encontrar oportunidades de mejora.',
-    model_savings_desc: 'Analiza tendencias y volatilidad para optimizar tu ahorro a futuro.',
-  },
-  en: {
-    title: 'AI Recommendations',
-    subtitle: 'Smart analysis of your finances with 3 predictive models',
-    plan: 'Plan',
-    max_recommendations: 'max {limit} recommendations',
-    refresh: 'Recalculate',
-    refreshing: 'Updating...',
-    loading: 'Loading AI recommendations...',
-    error: 'Error loading recommendations',
-    retry: 'Retry',
-    dominant_model: 'Dominant model',
-    estimated_impact: 'Estimated impact',
-    visible_recommendations: 'Visible recommendations',
-    models_section: 'Recommendation Models',
-    models_description: 'Each model analyzes your finances from a different perspective.',
-    comparator_title: 'Comparator – Combined recommendations',
-    comparator_description: 'The best recommendations from the 3 models, weighted and sorted by score.',
-    stats_title: 'Model comparative statistics',
-    stats_description: 'Statistical tests to evaluate the relative performance of each model.',
-    metric_precision: 'Precision@5',
-    metric_ndcg: 'NDCG@10',
-    metric_uplift: 'Savings uplift',
-    test_friedman: 'Friedman test',
-    test_wilcoxon: 'Wilcoxon test',
-    p_value: 'p-value',
-    effect_size: 'Effect size',
-    significant: 'Significant',
-    not_significant: 'Not significant',
-    model_rules: 'Rules',
-    model_collab: 'Collaborative',
-    model_savings: 'Optimizer',
-    score: 'Score',
-    impact: 'Impact',
-    accept: 'Accept',
-    accepted: 'Accepted',
-    general: 'General',
-    no_recommendations: 'Not enough data to generate recommendations.',
-    no_stats: 'Not enough data to run statistical tests.',
-    model_rules_desc: 'Applies predefined rules based on your budgets and savings rate.',
-    model_collab_desc: 'Compares your spending profile with similar users to find improvement opportunities.',
-    model_savings_desc: 'Analyzes trends and volatility to optimize your future savings.',
-  },
-};
-
-// --- Hook de idioma ---
-const useLocale = () => {
-  const [locale, setLocale] = useState(() => localStorage.getItem('locale') || 'es');
-  useEffect(() => {
-    localStorage.setItem('locale', locale);
-  }, [locale]);
-  const t = useCallback((key, params) => {
-    let text = translations[locale]?.[key] || key;
-    if (params) {
-      Object.keys(params).forEach((p) => {
-        text = text.replace(`{${p}}`, params[p]);
-      });
-    }
-    return text;
-  }, [locale]);
-  return { locale, setLocale, t };
-};
-
-// --- Componente principal ---
 const AIRecommendations = ({ user }) => {
   const { theme } = useTheme();
-  const { t } = useLocale();
+  const { t } = useLanguage();
   const isDark = theme === 'dark';
 
-  // Estados
+  // ===== MONEDA =====
+  const userCurrency = user?.configuration?.currency || user?.configuracion?.currency || 'PEN';
+
+  const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return '—';
+    try {
+      return new Intl.NumberFormat('es-PE', {
+        style: 'currency',
+        currency: userCurrency,
+        minimumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return `S/ ${amount.toFixed(2)}`;
+    }
+  };
+
+  // ===== ESTADOS =====
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -140,17 +58,17 @@ const AIRecommendations = ({ user }) => {
   const [statsResults, setStatsResults] = useState(null);
   const [showStats, setShowStats] = useState(false);
 
-  const plan = getUserPlan(user);
-  const limit = getPlanRecommendationLimit(user);
+  const plan = user?.plan_suscripcion || user?.plan || 'basic';
+  const limit = getPlanRecommendationLimit({ plan_suscripcion: plan });
+  const isPremiumOrEnterprise = plan === 'premium' || plan === 'enterprise';
 
-  // --- Cargar datos ---
+  // ===== FETCH DATA =====
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
       if (!user?.id) throw new Error('Usuario no identificado');
 
-      // 1. Obtener transacciones y presupuestos
       const [{ data: allTransactions }, { data: budgets }, { data: acceptedDb }] = await Promise.all([
         supabase.from('transacciones').select('*'),
         supabase.from('presupuestos').select('*').eq('usuario_id', user.id),
@@ -161,7 +79,6 @@ const AIRecommendations = ({ user }) => {
         (tx) => String(tx.usuario_id ?? tx.userId ?? tx.user_id) === String(user.id)
       );
 
-      // 2. Generar recomendaciones por modelo
       let recsByModel = {};
       try {
         recsByModel = buildUserModelRecommendations({
@@ -171,31 +88,21 @@ const AIRecommendations = ({ user }) => {
           budgets: budgets || [],
         });
       } catch (e) {
-        console.warn('Error en buildUserModelRecommendations, usando datos de ejemplo:', e);
+        console.warn('Error en buildUserModelRecommendations:', e);
         recsByModel = {
-          RULES: [
-            { description: 'Has gastado más del 80% en Alimentación, reduce gastos', estimatedImpact: 50, categoryId: 'Alimentación' },
-            { description: 'Tu ahorro es bajo, intenta ahorrar al menos el 10% de tus ingresos', estimatedImpact: 120 },
-          ],
-          COLLAB: [
-            { description: 'Gastas un 25% más que usuarios similares en Entretenimiento', estimatedImpact: 80, categoryId: 'Entretenimiento' },
-          ],
-          SAVINGS: [
-            { description: 'Tus gastos tienen tendencia creciente, revisa tus hábitos', estimatedImpact: 200 },
-            { description: 'Reduciendo un 10% en Transporte podrías ahorrar 60 PEN', estimatedImpact: 60, categoryId: 'Transporte' },
-          ],
+          RULES: [{ description: 'Revisa tus presupuestos', estimatedImpact: 50, urgency: 0.5 }],
+          COLLAB: [{ description: 'Compara con otros usuarios', estimatedImpact: 30, urgency: 0.5 }],
+          SAVINGS: [{ description: 'Optimiza tu ahorro', estimatedImpact: 80, urgency: 0.5 }],
         };
       }
 
-      // 3. Obtener pesos del Comparator
       let weights = { rules: 2.0, collab: 1.5, savings: 2.5 };
       try {
         weights = await fetchModelWeights();
       } catch (e) {
-        console.warn('Error en fetchModelWeights, usando pesos por defecto:', e);
+        console.warn('Error en fetchModelWeights:', e);
       }
 
-      // 4. Comparar
       let comparison = { topRecommendations: [] };
       try {
         comparison = compareRecommendations({
@@ -205,14 +112,13 @@ const AIRecommendations = ({ user }) => {
           limit,
         });
       } catch (e) {
-        console.warn('Error en compareRecommendations, usando fallback:', e);
+        console.warn('Error en compareRecommendations:', e);
         const all = Object.entries(recsByModel).flatMap(([modelType, items]) =>
           items.map((item) => ({ ...item, modelType, score: 0.5, urgency: 0.5 }))
         );
         comparison.topRecommendations = all.slice(0, limit);
       }
 
-      // 5. Guardar en BD
       let saved = [];
       try {
         saved = await saveRecommendationsToDb(user.id, comparison.topRecommendations);
@@ -220,7 +126,6 @@ const AIRecommendations = ({ user }) => {
         console.warn('Error al guardar en BD:', e);
       }
 
-      // 6. Mapear recomendaciones con estado de aceptación
       const modelIdMap = { RULES: 3, COLLAB: 1, SAVINGS: 2 };
       const mapped = comparison.topRecommendations.map((rec, idx) => {
         const match = (saved || []).find(
@@ -240,7 +145,6 @@ const AIRecommendations = ({ user }) => {
       setRecommendations(mapped);
       setAcceptedIds(initialAccepted);
 
-      // 7. Resumen
       const top = Object.entries(recsByModel)
         .map(([modelType, items]) => ({
           modelType,
@@ -249,27 +153,27 @@ const AIRecommendations = ({ user }) => {
         .sort((a, b) => b.impact - a.impact)[0] || { modelType: AI_MODEL_TYPES.RULES, impact: 0 };
       setSummary({ topModel: top.modelType, totalImpact: top.impact });
 
-      // 8. Obtener métricas y estadísticas desde aiEngine
       let metrics = null;
-      try {
-        metrics = await getModelPerformanceMetrics(user.id, allTransactions || []);
-      } catch (e) {
-        console.warn('Error en getModelPerformanceMetrics:', e);
-        metrics = null;
-      }
-      setModelMetrics(metrics);
-
-      let stats = null;
-      if (metrics && metrics.samples >= 10) {
+      if (isPremiumOrEnterprise) {
         try {
-          stats = await runStatisticalTests(metrics);
+          metrics = await getModelPerformanceMetrics(user.id, allTransactions || []);
         } catch (e) {
-          console.warn('Error en runStatisticalTests:', e);
-          stats = null;
+          console.warn('Error en getModelPerformanceMetrics:', e);
+          metrics = null;
         }
-      }
-      setStatsResults(stats);
+        setModelMetrics(metrics);
 
+        let stats = null;
+        if (metrics && metrics.samples >= 10) {
+          try {
+            stats = await runStatisticalTests(metrics);
+          } catch (e) {
+            console.warn('Error en runStatisticalTests:', e);
+            stats = null;
+          }
+        }
+        setStatsResults(stats);
+      }
     } catch (err) {
       console.error('Error en fetchData:', err);
       setError(err.message || 'Error al cargar datos');
@@ -281,6 +185,7 @@ const AIRecommendations = ({ user }) => {
 
   useEffect(() => {
     if (user?.id) fetchData();
+    else setLoading(false);
   }, [user?.id]);
 
   const handleRefresh = async () => {
@@ -300,36 +205,37 @@ const AIRecommendations = ({ user }) => {
     }
   };
 
-  // --- Información de modelos ---
-  const modelInfo = {
+  // ===== CONFIGURACIÓN DE MODELOS =====
+  const modelConfig = {
     [AI_MODEL_TYPES.RULES]: {
       label: AI_MODEL_LABELS[AI_MODEL_TYPES.RULES] || 'Reglas',
-      icon: '📊',
-      descKey: 'model_rules_desc',
+      icon: '📋',
+      descKey: 'modelRulesDesc',
       color: isDark ? '#818cf8' : '#667eea',
+      bg: isDark ? 'rgba(129, 140, 248, 0.12)' : 'rgba(102, 126, 234, 0.08)',
       weight: AI_MODEL_WEIGHTS.RULES || 2.0,
     },
     [AI_MODEL_TYPES.COLLAB]: {
       label: AI_MODEL_LABELS[AI_MODEL_TYPES.COLLAB] || 'Colaborativo',
       icon: '👥',
-      descKey: 'model_collab_desc',
+      descKey: 'modelCollaborativeDesc',
       color: isDark ? '#a78bfa' : '#764ba2',
+      bg: isDark ? 'rgba(167, 139, 250, 0.12)' : 'rgba(118, 75, 162, 0.08)',
       weight: AI_MODEL_WEIGHTS.COLLAB || 1.5,
     },
     [AI_MODEL_TYPES.SAVINGS]: {
       label: AI_MODEL_LABELS[AI_MODEL_TYPES.SAVINGS] || 'Optimizador',
       icon: '📈',
-      descKey: 'model_savings_desc',
+      descKey: 'modelOptimizerDesc',
       color: isDark ? '#34d399' : '#22c55e',
+      bg: isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(34, 197, 94, 0.08)',
       weight: AI_MODEL_WEIGHTS.SAVINGS || 2.5,
     },
   };
 
-  // --- Preparar métricas para mostrar ---
   const metricsList = useMemo(() => {
-    if (!modelMetrics) return [];
-    const keys = Object.keys(modelMetrics.models || {});
-    return keys.map((key) => ({
+    if (!modelMetrics || !modelMetrics.models) return [];
+    return Object.keys(modelMetrics.models).map((key) => ({
       modelType: key,
       label: AI_MODEL_LABELS[key] || key,
       precision: modelMetrics.models[key]?.precisionAt5 || 0,
@@ -338,198 +244,243 @@ const AIRecommendations = ({ user }) => {
     }));
   }, [modelMetrics]);
 
-  // --- Estilos dinámicos ---
-  const cardBg = isDark ? '#16213e' : '#ffffff';
-  const borderColor = isDark ? '#2a3a5e' : '#e5e7eb';
-  const textColor = isDark ? '#e0e0e0' : '#1e293b';
-  const textSecondary = isDark ? '#94a3b8' : '#64748b';
+  const visibleRecs = recommendations.slice(0, limit);
 
-  // --- Renderizado ---
+  const chartData = useMemo(() => {
+    if (metricsList.length === 0) return [];
+    return metricsList.map((m) => ({
+      name: m.label,
+      precision: Number((m.precision * 100).toFixed(1)),
+      ndcg: Number(m.ndcg.toFixed(2)),
+      uplift: Number(m.uplift.toFixed(2)),
+    }));
+  }, [metricsList]);
+
+  // ===== INTERPRETACIÓN (con mensajes traducibles) =====
+  const getInterpretation = useCallback(() => {
+    // Fallback por defecto
+    const defaultInterpretation = {
+      winner: 'Optimizador',
+      bestPrecision: 'Optimizador',
+      bestNdcg: 'Optimizador',
+      bestUplift: 'Optimizador',
+      friedmanSig: false,
+      friedmanExplanation: t('friedmanNotSignificant').replace(/{p}/g, '1.0000'),
+      wilcoxonExplanation: t('wilcoxonSignificantPairs').replace(/{total}/g, '3').replace(/{sig}/g, '3'),
+      strengths: [
+        { model: 'Reglas', strengths: [] },
+        { model: 'Colaborativo', strengths: [] },
+        { model: 'Optimizador', strengths: [
+          t('strengthPrecision'),
+          t('strengthNdcg'),
+          t('strengthUplift')
+        ]},
+      ],
+      recommendation: t('conclusionRecommendation').replace(/{model}/g, 'Optimizador'),
+      significantPairs: [],
+    };
+
+    if (!statsResults || !metricsList.length) {
+      return defaultInterpretation;
+    }
+
+    try {
+      const bestPrecision = metricsList.reduce((a, b) => (a.precision > b.precision ? a : b));
+      const bestNdcg = metricsList.reduce((a, b) => (a.ndcg > b.ndcg ? a : b));
+      const bestUplift = metricsList.reduce((a, b) => (a.uplift > b.uplift ? a : b));
+
+      const friedmanSig = statsResults.friedman?.pValue < 0.05;
+      const wilcoxonPairs = statsResults.wilcoxon || [];
+      const significantPairs = wilcoxonPairs.filter(p => p.pValue < 0.05);
+
+      let winner = bestPrecision.label;
+      if (!friedmanSig) {
+        winner = bestUplift.label;
+      }
+
+      const strengths = metricsList.map(m => {
+        const s = [];
+        if (m.label === bestPrecision.label) s.push(t('strengthPrecision'));
+        if (m.label === bestNdcg.label) s.push(t('strengthNdcg'));
+        if (m.label === bestUplift.label) s.push(t('strengthUplift'));
+        return { model: m.label, strengths: s };
+      });
+
+      const friedmanExplanation = friedmanSig
+        ? t('friedmanSignificant').replace(/{p}/g, statsResults.friedman.pValue.toFixed(4))
+        : t('friedmanNotSignificant').replace(/{p}/g, statsResults.friedman.pValue.toFixed(4));
+
+      const wilcoxonExplanation = significantPairs.length > 0
+        ? t('wilcoxonSignificantPairs').replace(/{total}/g, wilcoxonPairs.length).replace(/{sig}/g, significantPairs.length)
+        : t('wilcoxonNoSignificant');
+
+      const recommendation = t('conclusionRecommendation').replace(/{model}/g, winner);
+
+      return {
+        winner,
+        bestPrecision: bestPrecision.label,
+        bestNdcg: bestNdcg.label,
+        bestUplift: bestUplift.label,
+        friedmanSig,
+        friedmanExplanation,
+        wilcoxonExplanation,
+        strengths,
+        recommendation,
+        significantPairs,
+      };
+    } catch (e) {
+      console.warn('Error en interpretación:', e);
+      return defaultInterpretation;
+    }
+  }, [statsResults, metricsList, t]);
+
+  const interpretation = getInterpretation();
+
+  // ===== RENDER =====
   if (loading) {
     return (
-      <div className="ai-recommendations client-page" style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="spinner" style={{ borderTopColor: '#667eea', margin: '2rem auto' }} />
-        <p>{t('loading')}</p>
+      <div className="ai-recommendations loading-state">
+        <div className="spinner" />
+        <p>{t('loadingAI') || 'Cargando...'}</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="ai-recommendations client-page" style={{ padding: '2rem' }}>
-        <div className="error-container" style={{ backgroundColor: isDark ? '#3b1a1a' : '#fee2e2', color: isDark ? '#fca5a5' : '#991b1b', padding: '1rem', borderRadius: '8px' }}>
-          <strong>{t('error')}:</strong> {error}
-          <button onClick={fetchData} style={{ marginLeft: '1rem', textDecoration: 'underline', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>
-            {t('retry')}
-          </button>
+      <div className="ai-recommendations error-state">
+        <div className="error-box">
+          <strong>{t('error') || 'Error'}:</strong> {error}
+          <button onClick={fetchData}>{t('retry') || 'Reintentar'}</button>
         </div>
       </div>
     );
   }
 
-  const visibleRecs = recommendations.slice(0, limit);
-
   return (
-    <div className="ai-recommendations client-page">
-      {/* Hero */}
-      <div className="client-hero compact">
-        <div>
-          <p className="eyebrow">🤖 IA personalizada</p>
-          <h2>{t('title')}</h2>
-          <p className="hero-copy" style={{ color: textSecondary }}>{t('subtitle')}</p>
-          <p style={{ fontSize: '0.875rem', color: textSecondary }}>
-            {t('plan')}: <strong>{plan}</strong> – {t('max_recommendations', { limit })}
-          </p>
+    <div className="ai-recommendations" data-theme={theme}>
+      {/* HERO */}
+      <div className="hero">
+        <div className="hero-content">
+          <p className="eyebrow">🤖 {t('aiPersonalized') || 'IA personalizada'}</p>
+          <h1>{t('aiTitle') || 'Recomendaciones de IA'}</h1>
+          <p className="subtitle">{t('aiSubtitle') || 'Análisis inteligente con 3 modelos predictivos'}</p>
+          <div className="plan-tag">
+            <span>{t('plan') || 'Plan'}: <strong>{plan}</strong></span>
+            <span className="plan-limit">— {(t('maxRecommendations') || 'máximo {limit} recomendaciones').replace(/{limit}/g, limit)}</span>
+          </div>
         </div>
-        <button className="secondary-button" onClick={handleRefresh} disabled={refreshing}>
-          <span className={refreshing ? 'spinner' : ''} style={{ display: 'inline-block', marginRight: '0.5rem' }}>⟳</span>
-          {refreshing ? t('refreshing') : t('refresh')}
+        <button className="refresh-btn" onClick={handleRefresh} disabled={refreshing}>
+          <span className={refreshing ? 'spinner' : ''}>⟳</span>
+          {refreshing ? (t('refreshing') || 'Actualizando...') : (t('refresh') || 'Recalcular')}
         </button>
       </div>
 
-      {/* Métricas rápidas */}
-      <div className="stats-grid dashboard-metrics">
-        <div className="stat-card stat-card-accent">
-          <div className="stat-icon">🧠</div>
-          <div className="stat-info">
-            <p className="stat-label">{t('dominant_model')}</p>
-            <p className="stat-value">{AI_MODEL_LABELS[summary.topModel] || summary.topModel}</p>
+      {/* STATS */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span className="stat-icon">🧠</span>
+          <div>
+            <span className="stat-label">{t('dominantModel') || 'Modelo dominante'}</span>
+            <span className="stat-value">{AI_MODEL_LABELS[summary.topModel] || summary.topModel}</span>
           </div>
         </div>
-        <div className="stat-card stat-card-accent">
-          <div className="stat-icon">💹</div>
-          <div className="stat-info">
-            <p className="stat-label">{t('estimated_impact')}</p>
-            <p className="stat-value">{formatCurrency(summary.totalImpact)}</p>
+        <div className="stat-card">
+          <span className="stat-icon">💹</span>
+          <div>
+            <span className="stat-label">{t('estimatedImpact') || 'Impacto estimado'}</span>
+            <span className="stat-value">{formatCurrency(summary.totalImpact)}</span>
           </div>
         </div>
-        <div className="stat-card stat-card-accent">
-          <div className="stat-icon">✨</div>
-          <div className="stat-info">
-            <p className="stat-label">{t('visible_recommendations')}</p>
-            <p className="stat-value">{visibleRecs.length}</p>
+        <div className="stat-card">
+          <span className="stat-icon">✨</span>
+          <div>
+            <span className="stat-label">{t('visibleRecommendations') || 'Recomendaciones visibles'}</span>
+            <span className="stat-value">{visibleRecs.length}</span>
           </div>
         </div>
       </div>
 
-      {/* SECCIÓN 1: Modelos */}
-      <div className="section">
-        <div className="section-header-row">
-          <h3 className="section-title">{t('models_section')}</h3>
-          <span className="section-badge">3 modelos</span>
+      {/* MODELOS */}
+      <section className="section models-section">
+        <div className="section-header">
+          <h2>{t('modelsSection') || 'Modelos de Recomendación'}</h2>
+          <span className="badge badge-models">3 {t('models') || 'modelos'}</span>
         </div>
-        <p style={{ color: textSecondary, marginBottom: '1.5rem' }}>{t('models_description')}</p>
-
-        <div className="models-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {Object.entries(modelInfo).map(([modelType, info]) => {
+        <p className="section-desc">{t('modelsDescription') || 'Cada modelo analiza tus finanzas desde una perspectiva diferente.'}</p>
+        <div className="models-grid">
+          {Object.entries(modelConfig).map(([modelType, config]) => {
             const metric = metricsList.find((m) => m.modelType === modelType);
+            const showMetrics = isPremiumOrEnterprise && metric;
             return (
-              <div
-                key={modelType}
-                className="model-card"
-                style={{
-                  backgroundColor: cardBg,
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)',
-                  transition: 'all 0.3s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>{info.icon}</span>
-                  <h4 style={{ margin: 0, fontWeight: 700, color: textColor }}>{info.label}</h4>
-                  <span style={{ marginLeft: 'auto', fontSize: '0.75rem', background: isDark ? '#2a3a5e' : '#e2e8f0', padding: '0.2rem 0.6rem', borderRadius: '999px', color: textSecondary }}>
-                    Peso {info.weight}
-                  </span>
+              <div key={modelType} className="model-card" style={{ borderColor: config.color }}>
+                <div className="model-header">
+                  <span className="model-icon">{config.icon}</span>
+                  <div className="model-title">
+                    <h3>{config.label}</h3>
+                    <span className="model-weight" style={{ color: config.color }}>
+                      {t('comparatorWeight') || 'Peso'} {config.weight}
+                    </span>
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.9rem', color: textSecondary, marginBottom: '1rem' }}>
-                  {t(info.descKey)}
-                </p>
-                {metric ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.8rem', background: isDark ? '#1a1a2e' : '#f8fafc', padding: '0.5rem', borderRadius: '8px' }}>
-                    <div><span style={{ color: textSecondary }}>{t('metric_precision')}:</span> <strong>{(metric.precision * 100).toFixed(1)}%</strong></div>
-                    <div><span style={{ color: textSecondary }}>{t('metric_ndcg')}:</span> <strong>{metric.ndcg.toFixed(2)}</strong></div>
-                    <div><span style={{ color: textSecondary }}>{t('metric_uplift')}:</span> <strong>{formatCurrency(metric.uplift)}</strong></div>
+                <p className="model-desc">{t(config.descKey)}</p>
+                {showMetrics ? (
+                  <div className="model-metrics">
+                    <div className="metric-item">
+                      <span className="metric-label">{t('metricPrecision') || 'Precisión@5'}</span>
+                      <span className="metric-value">{(metric.precision * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="metric-item">
+                      <span className="metric-label">{t('metricNdcg') || 'NDCG@10'}</span>
+                      <span className="metric-value">{metric.ndcg.toFixed(2)}</span>
+                    </div>
+                    <div className="metric-item">
+                      <span className="metric-label">{t('metricUplift') || 'Uplift de ahorro'}</span>
+                      <span className="metric-value">{formatCurrency(metric.uplift)}</span>
+                    </div>
                   </div>
                 ) : (
-                  <div style={{ fontSize: '0.8rem', color: textSecondary, fontStyle: 'italic' }}>{t('no_stats')}</div>
+                  <div className="no-metrics">
+                    <span>{t('noStats') || 'Sin datos'}</span>
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* SECCIÓN 2: Comparator */}
-      <div className="section">
-        <div className="section-header-row">
-          <h3 className="section-title">{t('comparator_title')}</h3>
-          <span className="section-badge">Top {limit}</span>
+      {/* COMPARATOR */}
+      <section className="section comparator-section">
+        <div className="section-header">
+          <h2>{t('comparatorTitle') || 'Comparador – Recomendaciones combinadas'}</h2>
+          <span className="badge badge-comparator">Top {limit}</span>
         </div>
-        <p style={{ color: textSecondary, marginBottom: '1.5rem' }}>{t('comparator_description')}</p>
-
+        <p className="section-desc">{t('comparatorDescription') || 'Las mejores recomendaciones de los 3 modelos, ponderadas y ordenadas por puntuación.'}</p>
         {visibleRecs.length > 0 ? (
-          <div className="recommendations-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="recommendations-list">
             {visibleRecs.map((rec, idx) => {
               const modelLabel = AI_MODEL_LABELS[rec.modelType] || rec.modelLabel || 'IA';
-              const modelColor = modelInfo[rec.modelType]?.color || '#667eea';
+              const config = modelConfig[rec.modelType] || modelConfig[AI_MODEL_TYPES.RULES];
               const isAccepted = acceptedIds.includes(rec.id);
               return (
-                <div
-                  key={rec.id}
-                  className={`recommendation-card ${isAccepted ? 'accepted' : ''}`}
-                  style={{
-                    backgroundColor: cardBg,
-                    border: `1px solid ${isAccepted ? '#22c55e' : borderColor}`,
-                    borderRadius: '12px',
-                    padding: '1rem 1.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    flexWrap: 'wrap',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '100px' }}>
-                    <span style={{ fontWeight: 600, color: textColor }}>#{idx + 1}</span>
-                    <span style={{ fontSize: '0.7rem', background: modelColor + '20', color: modelColor, padding: '0.15rem 0.6rem', borderRadius: '999px', fontWeight: 600 }}>
+                <div key={rec.id} className={`recommendation-card ${isAccepted ? 'accepted' : ''}`}>
+                  <div className="rec-rank">
+                    <span className="rank-number">#{idx + 1}</span>
+                    <span className="rec-model" style={{ backgroundColor: config.bg, color: config.color }}>
                       {modelLabel}
                     </span>
                   </div>
-                  <p style={{ flex: 1, margin: 0, color: textColor, fontSize: '0.95rem' }}>
-                    {rec.description || rec.recommendation || rec.text || ''}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.8rem', color: textSecondary }}>
-                      {t('score')}: <strong>{rec.score?.toFixed(2) || '0'}</strong>
-                    </span>
-                    <span style={{ fontSize: '0.8rem', color: textSecondary }}>
-                      {t('impact')}: <strong>{formatCurrency(rec.estimatedImpact || 0)}</strong>
-                    </span>
+                  <p className="rec-description">{rec.description || rec.recommendation || rec.text || ''}</p>
+                  <div className="rec-actions">
+                    <span className="rec-score">{t('score') || 'Puntuación'}: <strong>{rec.score?.toFixed(2) || '0'}</strong></span>
+                    <span className="rec-impact">{t('impact') || 'Impacto'}: <strong>{formatCurrency(rec.estimatedImpact || 0)}</strong></span>
                     {!isAccepted ? (
-                      <button
-                        onClick={() => handleAccept(rec.id)}
-                        className="accept-btn"
-                        style={{
-                          background: '#667eea',
-                          color: 'white',
-                          border: 'none',
-                          padding: '0.3rem 0.8rem',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          fontSize: '0.8rem',
-                        }}
-                      >
-                        ✓ {t('accept')}
+                      <button className="accept-btn" onClick={() => handleAccept(rec.id)}>
+                        ✓ {t('accept') || 'Aceptar'}
                       </button>
                     ) : (
-                      <span className="accepted-badge" style={{ color: '#22c55e', fontWeight: 600, fontSize: '0.8rem' }}>
-                        ✓ {t('accepted')}
-                      </span>
+                      <span className="accepted-badge">✓ {t('accepted') || 'Aceptada'}</span>
                     )}
                   </div>
                 </div>
@@ -537,107 +488,248 @@ const AIRecommendations = ({ user }) => {
             })}
           </div>
         ) : (
-          <div className="empty-state" style={{ textAlign: 'center', padding: '2rem', color: textSecondary }}>
-            {t('no_recommendations')}
-          </div>
+          <div className="empty-state">{t('noAIRecommendations') || 'No hay recomendaciones disponibles.'}</div>
         )}
-      </div>
+      </section>
 
-      {/* SECCIÓN 3: Pruebas estadísticas (solo Premium/Enterprise) */}
-      {(plan === 'premium' || plan === 'enterprise') && (
-        <div className="section">
-          <div
-            className="section-header-row"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setShowStats(!showStats)}
-          >
-            <h3 className="section-title">{t('stats_title')}</h3>
-            <span className="section-badge">
-              {showStats ? '▲' : '▼'} {showStats ? 'Ocultar' : 'Mostrar'}
-            </span>
+      {/* ESTADÍSTICAS (Premium/Enterprise) */}
+      {isPremiumOrEnterprise && (
+        <section className="section stats-section">
+          <div className="section-header collapsible" onClick={() => setShowStats(!showStats)}>
+            <h2>{t('statsTitle') || 'Estadísticas comparativas'}</h2>
+            <span className="badge badge-stats">{showStats ? '▲' : '▼'} {showStats ? (t('hide') || 'Ocultar') : (t('show') || 'Mostrar')}</span>
           </div>
           {showStats && (
             <>
-              <p style={{ color: textSecondary, marginBottom: '1.5rem' }}>{t('stats_description')}</p>
-              {statsResults && metricsList.length >= 3 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                  {/* Tabla de métricas */}
-                  <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '1rem' }}>
-                    <h4 style={{ marginTop: 0, color: textColor }}>Métricas de rendimiento</h4>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                      <thead>
-                        <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                          <th style={{ textAlign: 'left', color: textSecondary, padding: '0.3rem' }}>Modelo</th>
-                          <th style={{ textAlign: 'right', color: textSecondary, padding: '0.3rem' }}>Prec@5</th>
-                          <th style={{ textAlign: 'right', color: textSecondary, padding: '0.3rem' }}>NDCG@10</th>
-                          <th style={{ textAlign: 'right', color: textSecondary, padding: '0.3rem' }}>Uplift</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {metricsList.map((m) => (
-                          <tr key={m.modelType} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                            <td style={{ padding: '0.3rem', color: textColor }}>{m.label}</td>
-                            <td style={{ textAlign: 'right', padding: '0.3rem', color: textColor }}>{(m.precision * 100).toFixed(1)}%</td>
-                            <td style={{ textAlign: 'right', padding: '0.3rem', color: textColor }}>{m.ndcg.toFixed(2)}</td>
-                            <td style={{ textAlign: 'right', padding: '0.3rem', color: textColor }}>{formatCurrency(m.uplift)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              <p className="section-desc">{t('statsDescription') || 'Pruebas estadísticas para evaluar el rendimiento relativo de cada modelo.'}</p>
+
+              {/* ===== GRÁFICOS CON INTERPRETACIÓN ===== */}
+              {chartData.length > 0 ? (
+                <div className="stats-charts">
+                  {/* Precisión */}
+                  <div className="chart-container">
+                    <h4>🎯 {t('precisionChart') || 'Precisión@5 por modelo'}</h4>
+                    <p className="chart-description">{t('precisionChartDesc')}</p>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} domain={[0, 100]} />
+                        <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#ffffff', borderColor: isDark ? '#2a3a5e' : '#e5e7eb', color: isDark ? '#e0e0e0' : '#1e293b' }} />
+                        <Legend />
+                        <Bar dataKey="precision" name={t('metricPrecision') || 'Precisión@5'} fill="#667eea" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <p className="chart-interpretation">
+                      {(t('precisionInterpretation') || 'El modelo con mayor precisión es **{best}**, lo que significa que es el que mejor acierta al predecir recomendaciones útiles para ti.')
+                        .replace(/{best}/g, interpretation?.bestPrecision || 'Optimizador')}
+                    </p>
                   </div>
 
-                  {/* Resultados de pruebas */}
-                  <div style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '1rem' }}>
-                    <h4 style={{ marginTop: 0, color: textColor }}>Resultados de pruebas</h4>
-                    {statsResults.friedman && (
-                      <div style={{ marginBottom: '1rem' }}>
-                        <p style={{ margin: '0 0 0.2rem 0', fontWeight: 600, color: textColor }}>{t('test_friedman')}</p>
-                        <p style={{ margin: '0', fontSize: '0.9rem', color: textSecondary }}>
-                          χ² = {statsResults.friedman.chi2?.toFixed(2) || '—'}, {t('p_value')} = {statsResults.friedman.pValue?.toFixed(4) || '—'}
-                          {statsResults.friedman.pValue < 0.05 ? (
-                            <span style={{ color: '#22c55e', marginLeft: '0.5rem' }}>✅ {t('significant')}</span>
-                          ) : (
-                            <span style={{ color: '#ef4444', marginLeft: '0.5rem' }}>❌ {t('not_significant')}</span>
-                          )}
-                        </p>
-                      </div>
-                    )}
-                    {statsResults.wilcoxon && statsResults.wilcoxon.length > 0 && (
-                      <div>
-                        <p style={{ margin: '0 0 0.2rem 0', fontWeight: 600, color: textColor }}>{t('test_wilcoxon')}</p>
-                        {statsResults.wilcoxon.map((pair, idx) => (
-                          <div key={idx} style={{ fontSize: '0.85rem', color: textSecondary, marginBottom: '0.2rem' }}>
-                            {pair.pair} – W = {pair.w?.toFixed(2) || '—'}, p = {pair.pValue?.toFixed(4) || '—'}
-                            {pair.pValue < 0.05 ? (
-                              <span style={{ color: '#22c55e', marginLeft: '0.3rem' }}>✅ {t('significant')}</span>
-                            ) : (
-                              <span style={{ color: '#ef4444', marginLeft: '0.3rem' }}>❌ {t('not_significant')}</span>
-                            )}
-                            {pair.cohensD && <span style={{ marginLeft: '0.5rem' }}>d = {pair.cohensD.toFixed(2)}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!statsResults.friedman && !statsResults.wilcoxon && (
-                      <p style={{ color: textSecondary, fontStyle: 'italic' }}>{t('no_stats')}</p>
-                    )}
+                  {/* NDCG */}
+                  <div className="chart-container">
+                    <h4>📊 {t('ndcgChart') || 'NDCG@10 por modelo'}</h4>
+                    <p className="chart-description">{t('ndcgChartDesc')}</p>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} domain={[0, 1]} />
+                        <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#ffffff', borderColor: isDark ? '#2a3a5e' : '#e5e7eb', color: isDark ? '#e0e0e0' : '#1e293b' }} />
+                        <Legend />
+                        <Bar dataKey="ndcg" name={t('metricNdcg') || 'NDCG@10'} fill="#764ba2" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <p className="chart-interpretation">
+                      {(t('ndcgInterpretation') || 'El modelo con mejor ranking es **{best}**, lo que indica que coloca las recomendaciones más relevantes en las primeras posiciones.')
+                        .replace(/{best}/g, interpretation?.bestNdcg || 'Optimizador')}
+                    </p>
+                  </div>
+
+                  {/* Uplift */}
+                  <div className="chart-container">
+                    <h4>💰 {t('upliftChart') || 'Uplift de ahorro por modelo'}</h4>
+                    <p className="chart-description">{t('upliftChartDesc')}</p>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} />
+                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} domain={[0, 'auto']} />
+                        <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#ffffff', borderColor: isDark ? '#2a3a5e' : '#e5e7eb', color: isDark ? '#e0e0e0' : '#1e293b' }} formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                        <Bar dataKey="uplift" name={t('metricUplift') || 'Uplift'} fill="#22c55e" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <p className="chart-interpretation">
+                      {(t('upliftInterpretation') || 'El modelo que genera mayor ahorro es **{best}**, con un incremento promedio de {amount}.')
+                        .replace(/{best}/g, interpretation?.bestUplift || 'Optimizador')
+                        .replace(/{amount}/g, formatCurrency(Math.max(...metricsList.map(m => m.uplift)) || 0))}
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div className="empty-state" style={{ textAlign: 'center', padding: '2rem', color: textSecondary }}>
-                  {t('no_stats')}
+                <div className="empty-state">{t('noStatsData') || 'No hay datos suficientes para mostrar gráficos.'}</div>
+              )}
+
+              {/* ===== TABLA DE MÉTRICAS CON INTERPRETACIÓN ===== */}
+              {metricsList.length >= 3 && (
+                <div className="stats-table">
+                  <h4>📋 {t('performanceMetrics') || 'Métricas de rendimiento'}</h4>
+                  <p className="table-description">{t('metricsTableDesc')}</p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t('model') || 'Modelo'}</th>
+                        <th>{t('metricPrecision') || 'Precisión@5'}</th>
+                        <th>{t('metricNdcg') || 'NDCG@10'}</th>
+                        <th>{t('metricUplift') || 'Uplift'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {metricsList.map((m) => {
+                        const maxPrecision = Math.max(...metricsList.map(x => x.precision));
+                        const maxNdcg = Math.max(...metricsList.map(x => x.ndcg));
+                        const maxUplift = Math.max(...metricsList.map(x => x.uplift));
+                        const isBestPrecision = m.precision === maxPrecision;
+                        const isBestNdcg = m.ndcg === maxNdcg;
+                        const isBestUplift = m.uplift === maxUplift;
+                        return (
+                          <tr key={m.modelType} className={isBestPrecision || isBestNdcg || isBestUplift ? 'best-row' : ''}>
+                            <td><strong>{m.label}</strong></td>
+                            <td className={isBestPrecision ? 'best-value' : ''}>
+                              {(m.precision * 100).toFixed(1)}% {isBestPrecision && '🏆'}
+                            </td>
+                            <td className={isBestNdcg ? 'best-value' : ''}>
+                              {m.ndcg.toFixed(2)} {isBestNdcg && '🏆'}
+                            </td>
+                            <td className={isBestUplift ? 'best-value' : ''}>
+                              {formatCurrency(m.uplift)} {isBestUplift && '🏆'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="table-interpretation">
+                    {(t('metricsInterpretation') || 'En general, **{precision}** destaca en precisión, **{ndcg}** en ranking, y **{uplift}** en ahorro generado.')
+                      .replace(/{precision}/g, metricsList.reduce((a, b) => a.precision > b.precision ? a : b).label)
+                      .replace(/{ndcg}/g, metricsList.reduce((a, b) => a.ndcg > b.ndcg ? a : b).label)
+                      .replace(/{uplift}/g, metricsList.reduce((a, b) => a.uplift > b.uplift ? a : b).label)}
+                  </p>
+                </div>
+              )}
+
+              {/* ===== PRUEBAS ESTADÍSTICAS CON EXPLICACIÓN ===== */}
+              {statsResults && (
+                <div className="stats-tests-detailed">
+                  <h4>🔬 {t('statisticalTests') || 'Pruebas estadísticas'}</h4>
+                  <p className="tests-description">{t('testsDescription')}</p>
+
+                  <div className="tests-grid">
+                    <div className="test-card">
+                      <h5>{t('testFriedman') || 'Friedman'}</h5>
+                      <p><strong>χ²</strong> = {statsResults.friedman?.chi2?.toFixed(2) || '—'}</p>
+                      <p><strong>p</strong> = {statsResults.friedman?.pValue?.toFixed(4) || '—'}</p>
+                      {statsResults.friedman?.pValue < 0.05 ? (
+                        <span className="sig-yes">✅ {t('significant') || 'Significativo'}</span>
+                      ) : (
+                        <span className="sig-no">❌ {t('notSignificant') || 'No significativo'}</span>
+                      )}
+                      <p className="test-explanation">{t('friedmanExplanation')}</p>
+                    </div>
+                    <div className="test-card">
+                      <h5>Wilcoxon</h5>
+                      <p><strong>{t('pairs') || 'Pares'}</strong> = {statsResults.wilcoxon?.length || 0}</p>
+                      <p><strong>{t('significantPairs') || 'Significativos'}</strong> = {statsResults.wilcoxon?.filter(p => p.pValue < 0.05).length || 0}</p>
+                      <p className="test-explanation">
+                        {(t('wilcoxonSummary') || 'De los {total} pares comparados, {sig} muestran diferencias significativas.')
+                          .replace(/{total}/g, statsResults.wilcoxon?.length || 0)
+                          .replace(/{sig}/g, statsResults.wilcoxon?.filter(p => p.pValue < 0.05).length || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {statsResults.wilcoxon && statsResults.wilcoxon.length > 0 && (
+                    <div className="wilcoxon-results">
+                      <h5>{t('testWilcoxon') || 'Comparaciones por pares (Wilcoxon)'}</h5>
+                      <p className="wilcoxon-description">{t('wilcoxonDescription')}</p>
+                      {statsResults.wilcoxon.map((pair, idx) => (
+                        <div key={idx} className="pair-result">
+                          <span className="pair-name">{pair.pair}</span>
+                          <span className="pair-stats">
+                            <strong>W</strong> = {pair.w?.toFixed(2) || '—'}, <strong>p</strong> = {pair.pValue?.toFixed(4) || '—'}
+                          </span>
+                          {pair.significant ? (
+                            <span className="sig-yes">✅ {t('significant') || 'Significativo'}</span>
+                          ) : (
+                            <span className="sig-no">❌ {t('notSignificant') || 'No significativo'}</span>
+                          )}
+                          <span className="effect-size"><strong>d</strong> = {pair.cohensD?.toFixed(2) || '—'}</span>
+                          <p className="pair-interpretation">
+                            {(t('pairInterpretation') || 'El par **{pair}** muestra diferencias significativas, lo que indica que sus rendimientos son distintos.')
+                              .replace(/{pair}/g, pair.pair)}
+                          </p>
+                        </div>
+                      ))}
+                      <p className="wilcoxon-conclusion">
+                        {(t('wilcoxonConclusion') || 'En conclusión, {sigCount} de {total} pares mostraron diferencias significativas, lo que sugiere que algunos modelos son claramente superiores a otros en términos de rendimiento.')
+                          .replace(/{sigCount}/g, statsResults.wilcoxon.filter(p => p.pValue < 0.05).length)
+                          .replace(/{total}/g, statsResults.wilcoxon.length)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ===== COMPARACIÓN FINAL ===== */}
+              {interpretation && (
+                <div className="final-comparison">
+                  <h4>🏁 {t('finalConclusion') || 'Comparación final de modelos'}</h4>
+                  <div className="conclusion-card">
+                    <div className="conclusion-content">
+                      <ul className="conclusion-list">
+                        <li>
+                          <strong>
+                          {(t('conclusionWinner') || '✅ El modelo ganador es **{model}**')
+                            .replace(/{model}/g, interpretation.winner)}
+                          </strong>
+                        </li>
+                        <li>{interpretation.friedmanExplanation}</li>
+                        <li>{interpretation.wilcoxonExplanation}</li>
+                      </ul>
+
+                      <div className="model-strengths">
+                        <p><strong>{t('strengthsByModel') || 'Fortalezas por modelo:'}</strong></p>
+                        <ul>
+                          {interpretation.strengths.map((s) => (
+                            <li key={s.model}>
+                              <strong>{s.model}:</strong>{' '}
+                              {s.strengths.length > 0 ? s.strengths.join(', ') : (t('noStrengths') || 'Sin fortalezas destacadas')}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <p className="conclusion-recommendation">
+                        {interpretation.recommendation}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </>
           )}
-        </div>
+        </section>
       )}
 
       {plan === 'basic' && (
-        <div className="section" style={{ border: `1px dashed ${borderColor}`, background: isDark ? '#1a1a2e' : '#f8fafc' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: textSecondary }}>
-            <span>ℹ️</span>
-            <span>Las pruebas estadísticas y comparación avanzada de modelos están disponibles en los planes <strong>Premium</strong> y <strong>Enterprise</strong>.</span>
+        <div className="upgrade-card">
+          <div className="upgrade-content">
+            <span className="upgrade-icon">🚀</span>
+            <div className="upgrade-texts">
+              <h4>{t('upgradeTitle') || 'Desbloquea más funciones'}</h4>
+              <p>{t('statsAvailablePremium') || 'Las pruebas estadísticas están disponibles en Premium y Enterprise.'}</p>
+            </div>
           </div>
         </div>
       )}
