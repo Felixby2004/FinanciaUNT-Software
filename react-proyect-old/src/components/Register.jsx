@@ -26,7 +26,6 @@ const Register = () => {
   const [verificationError, setVerificationError] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPlan, setPendingPlan] = useState(null);
-  // Estado para simular el pago (solo validación, no se guarda)
   const [paymentDetails, setPaymentDetails] = useState({
     cardholderName: '',
     cardNumber: '',
@@ -96,7 +95,17 @@ const Register = () => {
     },
   ];
 
-  // ===== VALIDACIONES DE TARJETA (solo para simulación) =====
+  // ===== MANEJADORES DE FORMULARIO =====
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePlanSelect = (planId) => {
+    setFormData((prev) => ({ ...prev, plan: planId }));
+  };
+
+  // ===== VALIDACIONES DE TARJETA (solo simulación) =====
   const validateCardNumber = (value) => {
     const clean = value.replace(/\s/g, '');
     if (!/^\d*$/.test(clean)) return 'Solo números';
@@ -167,8 +176,8 @@ const Register = () => {
         formatted = value;
     }
 
-    setPaymentDetails(prev => ({ ...prev, [field]: formatted }));
-    setPaymentErrors(prev => ({ ...prev, [field]: error }));
+    setPaymentDetails((prev) => ({ ...prev, [field]: formatted }));
+    setPaymentErrors((prev) => ({ ...prev, [field]: error }));
   };
 
   const isPaymentValid = () => {
@@ -183,7 +192,7 @@ const Register = () => {
     );
   };
 
-  // ===== REGISTRAR USUARIO (sin guardar datos bancarios) =====
+  // ===== REGISTRAR USUARIO (SIN GUARDAR DATOS BANCARIOS) =====
   const registerUser = async (plan, isVerified = false) => {
     const hashedPassword = await hashPassword(formData.password);
     const userData = {
@@ -200,10 +209,6 @@ const Register = () => {
     if (dbError) throw dbError;
   };
 
-  // ===== ACTUALIZAR PLAN Y VERIFICAR (para usuarios que ya existen) =====
-  // Esta función se usa en Plans, no en Register, pero la dejamos por si acaso.
-  // En Register no se actualiza, se inserta directamente.
-
   // ===== ENVÍO DEL FORMULARIO =====
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -216,7 +221,7 @@ const Register = () => {
       return;
     }
 
-    // Si el plan es básico, registrar directamente
+    // Plan básico: registro directo
     if (formData.plan === 'basico') {
       try {
         await registerUser('basico', false);
@@ -228,7 +233,7 @@ const Register = () => {
       return;
     }
 
-    // Plan pago: solicitar verificación de email
+    // Plan de pago: enviar código de verificación
     try {
       setIsSendingCode(true);
       await requestVerificationCode(formData.email);
@@ -252,7 +257,6 @@ const Register = () => {
         setVerificationError(t('invalidCode'));
         return;
       }
-      // Código correcto: cerrar modal y abrir pago
       setShowVerificationModal(false);
       setVerificationCode('');
       setShowPaymentModal(true);
@@ -261,7 +265,7 @@ const Register = () => {
     }
   };
 
-  // ===== CONFIRMAR PAGO (SOLO REGISTRA USUARIO CON PLAN Y VERIFICADO) =====
+  // ===== CONFIRMAR PAGO =====
   const handlePaymentConfirm = async () => {
     if (!isPaymentValid()) {
       setError('Por favor, completa todos los campos de pago correctamente.');
@@ -272,7 +276,6 @@ const Register = () => {
     setError('');
 
     try {
-      // Registrar usuario con el plan seleccionado y verificado
       await registerUser(pendingPlan, true);
       navigate('/login');
     } catch (err) {
@@ -282,7 +285,7 @@ const Register = () => {
     }
   };
 
-  // ===== ESTILOS MODALES =====
+  // ===== ESTILOS =====
   const modalOverlayStyle = {
     position: 'fixed',
     top: 0,
@@ -605,7 +608,7 @@ const Register = () => {
         </div>
       )}
 
-      {/* ===== MODAL DE PAGO (SOLO SIMULACIÓN) ===== */}
+      {/* ===== MODAL DE PAGO ===== */}
       {showPaymentModal && (
         <div style={modalOverlayStyle} onClick={() => setShowPaymentModal(false)}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -672,7 +675,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Botón de confirmar pago */}
             <button
               style={{
                 backgroundColor: isPaymentValid() ? '#667eea' : '#94a3b8',
